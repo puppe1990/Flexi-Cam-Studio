@@ -1438,6 +1438,117 @@ export default function CameraRecorder() {
     [screenshots.length],
   )
 
+  // Apply effects to screenshot canvas
+  const applyEffectToScreenshot = useCallback((ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, mode: "crop" | "full") => {
+    if (!videoContainerRef.current) return
+
+    let effectAreaInCanvas = { x: 0, y: 0, width: canvas.width, height: canvas.height }
+
+    if (mode === "full") {
+      // For full screenshot, calculate effect area position
+      const video = videoRef.current
+      if (!video) return
+
+      const videoWidth = video.videoWidth || 1280
+      const videoHeight = video.videoHeight || 720
+      const videoAspectRatio = videoWidth / videoHeight
+
+      const containerRect = videoContainerRef.current.getBoundingClientRect()
+      const containerAspectRatio = containerRect.width / containerRect.height
+
+      let displayedVideoWidth: number
+      let displayedVideoHeight: number
+      let videoOffsetX = 0
+      let videoOffsetY = 0
+
+      if (videoAspectRatio > containerAspectRatio) {
+        displayedVideoWidth = containerRect.width
+        displayedVideoHeight = containerRect.width / videoAspectRatio
+        videoOffsetX = 0
+        videoOffsetY = (containerRect.height - displayedVideoHeight) / 2
+      } else {
+        displayedVideoWidth = containerRect.height * videoAspectRatio
+        displayedVideoHeight = containerRect.height
+        videoOffsetX = (containerRect.width - displayedVideoWidth) / 2
+        videoOffsetY = 0
+      }
+
+      const effectStartX = effectCropArea.x * containerRect.width
+      const effectStartY = effectCropArea.y * containerRect.height
+      const effectWidth = effectCropArea.width * containerRect.width
+      const effectHeight = effectCropArea.height * containerRect.height
+
+      const videoEffectStartX = (effectStartX - videoOffsetX) * (videoWidth / displayedVideoWidth)
+      const videoEffectStartY = (effectStartY - videoOffsetY) * (videoHeight / displayedVideoHeight)
+      const videoEffectWidth = effectWidth * (videoWidth / displayedVideoWidth)
+      const videoEffectHeight = effectHeight * (videoHeight / displayedVideoHeight)
+
+      effectAreaInCanvas = {
+        x: Math.max(0, Math.min(videoEffectStartX, videoWidth)),
+        y: Math.max(0, Math.min(videoEffectStartY, videoHeight)),
+        width: Math.max(1, Math.min(videoEffectWidth, videoWidth - Math.max(0, videoEffectStartX))),
+        height: Math.max(1, Math.min(videoEffectHeight, videoHeight - Math.max(0, videoEffectStartY)))
+      }
+    } else {
+      // For crop mode, apply effect to the whole cropped area for simplicity
+      // You could enhance this to calculate intersection if needed
+      effectAreaInCanvas = { x: 0, y: 0, width: canvas.width, height: canvas.height }
+    }
+
+    // Extract the effect area
+    const imageData = ctx.getImageData(effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
+
+    if (videoEffect === "blur") {
+      const blurAmount = effectIntensity * 2
+      try {
+        // Create blur canvas
+        const blurCanvas = document.createElement("canvas")
+        const blurCtx = blurCanvas.getContext("2d")
+        if (blurCtx) {
+          blurCanvas.width = effectAreaInCanvas.width
+          blurCanvas.height = effectAreaInCanvas.height
+          blurCtx.putImageData(imageData, 0, 0)
+          blurCtx.filter = `blur(${blurAmount}px)`
+          blurCtx.drawImage(blurCanvas, 0, 0)
+          ctx.drawImage(blurCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
+        }
+      } catch (error) {
+        // Fallback to manual blur
+        const blurredData = applyManualBlur(imageData, Math.ceil(blurAmount / 2))
+        ctx.putImageData(blurredData, effectAreaInCanvas.x, effectAreaInCanvas.y)
+      }
+    } else if (videoEffect === "pixelate") {
+      const pixelSize = Math.max(2, effectIntensity * 4)
+      const scaledWidth = Math.max(1, Math.floor(effectAreaInCanvas.width / pixelSize))
+      const scaledHeight = Math.max(1, Math.floor(effectAreaInCanvas.height / pixelSize))
+
+      const pixelCanvas = document.createElement("canvas")
+      const pixelCtx = pixelCanvas.getContext("2d")
+      if (pixelCtx) {
+        pixelCanvas.width = scaledWidth
+        pixelCanvas.height = scaledHeight
+        pixelCtx.imageSmoothingEnabled = false
+
+        // Draw reduced size
+        pixelCtx.putImageData(imageData, 0, 0)
+        const tempCanvas = document.createElement("canvas")
+        const tempCtx = tempCanvas.getContext("2d")
+        if (tempCtx) {
+          tempCanvas.width = effectAreaInCanvas.width
+          tempCanvas.height = effectAreaInCanvas.height
+          tempCtx.putImageData(imageData, 0, 0)
+          pixelCtx.drawImage(tempCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, 0, 0, scaledWidth, scaledHeight)
+
+          // Draw back at full size
+          tempCtx.imageSmoothingEnabled = false
+          tempCtx.clearRect(0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height)
+          tempCtx.drawImage(pixelCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height)
+          ctx.drawImage(tempCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
+        }
+      }
+    }
+  }, [videoRef, videoContainerRef, effectCropArea, videoEffect, effectIntensity, applyManualBlur])
+
   // Take screenshot (with crop if enabled and timer support)
   const takeScreenshot = useCallback(
     async (withTimer = true) => {
@@ -1565,6 +1676,11 @@ export default function CameraRecorder() {
         }
       }
 
+      // Apply effects if enabled
+      if (isEffectCropMode && videoEffect !== ("none" as VideoEffect)) {
+        applyEffectToScreenshot(ctx, canvas, isCropMode ? "crop" : "full")
+      }
+
       // Show flash effect
       setShowFlash(true)
       setTimeout(() => setShowFlash(false), 200)
@@ -1596,7 +1712,7 @@ export default function CameraRecorder() {
         quality,
       )
     },
-    [recordingState, screenshotFormat, isCropMode, cropArea, screenshotTimer, isTimerActive, isFullscreen, isMirrored],
+    [recordingState, screenshotFormat, isCropMode, cropArea, screenshotTimer, isTimerActive, isFullscreen, isMirrored, isEffectCropMode, videoEffect, effectIntensity, applyEffectToScreenshot],
   )
 
   // Cancel screenshot timer
