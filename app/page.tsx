@@ -2337,9 +2337,9 @@ export default function CameraRecorder() {
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-slate-800 flex items-center justify-center gap-2">
             <Video className="w-8 h-8 text-blue-600" />
-            Camera Recorder & Editor
+            FlexiCam Studio
           </h1>
-          <p className="text-slate-600">Record, edit, and download your videos with ease</p>
+          <p className="text-slate-600">Professional camera recorder & video editor with real-time effects</p>
 
           {/* Format Support Status */}
           <div className="flex items-center justify-center gap-4 text-sm">
