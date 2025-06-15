@@ -864,8 +864,8 @@ export default function CameraRecorder() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // Only show effect preview when effect crop mode is active and recording is idle
-    if (!isEffectCropMode || videoEffect === ("none" as VideoEffect) || recordingState !== "idle") {
+    // Only show effect preview when effect crop mode is active (works during recording too)
+    if (!isEffectCropMode || videoEffect === ("none" as VideoEffect)) {
       canvas.style.display = "none"
       return
     }
@@ -1003,15 +1003,15 @@ export default function CameraRecorder() {
     // Draw the processed area to the main canvas
     ctx.drawImage(tempCanvas, 0, 0, effectWidth, effectHeight, effectStartX, effectStartY, effectWidth, effectHeight)
 
-    // Continue animation
-    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect) && recordingState === "idle") {
+    // Continue animation (works during recording too)
+    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect)) {
       previewEffectAnimationRef.current = requestAnimationFrame(updateEffectPreview)
     }
   }, [isEffectCropMode, videoEffect, effectIntensity, effectCropArea, isMirrored, recordingState, applyManualBlur])
 
   // Start/stop effect preview animation
   useEffect(() => {
-    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect) && recordingState === "idle") {
+    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect)) {
       // Cancel any existing animation before starting a new one
       if (previewEffectAnimationRef.current) {
         cancelAnimationFrame(previewEffectAnimationRef.current)
