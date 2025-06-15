@@ -29,6 +29,7 @@ import {
 
 import JSZip from "jszip"
 
+// Types (can be imported from types/camera.ts)
 type RecordingState = "idle" | "recording" | "stopped" | "editing" | "processing"
 type ExportFormat = "webm" | "mp4" | "avi" | "mov" | "3gp"
 type ScreenshotFormat = "png" | "jpeg"
