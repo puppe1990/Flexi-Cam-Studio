@@ -1558,7 +1558,7 @@ export default function CameraRecorder() {
       // If timer is set and this is a manual trigger, start countdown
       if (withTimer && screenshotTimer > 0 && !isTimerActive) {
         setIsTimerActive(true)
-        const countdown = screenshotTimer
+        setTimerCountdown(screenshotTimer) // Initialize countdown with the timer value
 
         const countdownInterval = setInterval(() => {
           setTimerCountdown((prev) => {
