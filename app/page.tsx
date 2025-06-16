@@ -29,6 +29,7 @@ import {
 
 import JSZip from "jszip"
 
+// Types (can be imported from types/camera.ts)
 type RecordingState = "idle" | "recording" | "stopped" | "editing" | "processing"
 type ExportFormat = "webm" | "mp4" | "avi" | "mov" | "3gp"
 type ScreenshotFormat = "png" | "jpeg"
@@ -112,11 +113,13 @@ export default function CameraRecorder() {
   const screenshotCanvasRef = useRef<HTMLCanvasElement>(null)
   const cropCanvasRef = useRef<HTMLCanvasElement>(null)
   const effectCanvasRef = useRef<HTMLCanvasElement>(null)
+  const previewEffectCanvasRef = useRef<HTMLCanvasElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const croppedStreamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const previewEffectAnimationRef = useRef<number | null>(null)
 
   // Utility function to download blob with better file handling
   const downloadBlob = useCallback(
@@ -816,6 +819,221 @@ export default function CameraRecorder() {
     return canvasStream
   }, [cropArea, isFullscreen, isMirrored])
 
+  // Manual blur function as fallback
+  const applyManualBlur = useCallback((imageData: ImageData, radius: number): ImageData => {
+    const { data, width, height } = imageData
+    const output = new ImageData(width, height)
+    const outputData = output.data
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let r = 0, g = 0, b = 0, a = 0
+        let count = 0
+
+        for (let dy = -radius; dy <= radius; dy++) {
+          for (let dx = -radius; dx <= radius; dx++) {
+            const nx = Math.max(0, Math.min(width - 1, x + dx))
+            const ny = Math.max(0, Math.min(height - 1, y + dy))
+            const i = (ny * width + nx) * 4
+
+            r += data[i]
+            g += data[i + 1]
+            b += data[i + 2]
+            a += data[i + 3]
+            count++
+          }
+        }
+
+        const i = (y * width + x) * 4
+        outputData[i] = r / count
+        outputData[i + 1] = g / count
+        outputData[i + 2] = b / count
+        outputData[i + 3] = a / count
+      }
+    }
+
+    return output
+  }, [])
+
+  // Create real-time effect preview overlay
+  const updateEffectPreview = useCallback(() => {
+    if (!previewEffectCanvasRef.current || !videoRef.current || !videoContainerRef.current) return
+    
+    const canvas = previewEffectCanvasRef.current
+    const video = videoRef.current
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    // Only show effect preview when effect crop mode is active (works during recording too)
+    if (!isEffectCropMode || videoEffect === ("none" as VideoEffect)) {
+      canvas.style.display = "none"
+      return
+    }
+
+    canvas.style.display = "block"
+    
+    // Get container dimensions
+    const containerRect = videoContainerRef.current.getBoundingClientRect()
+    
+    // Set canvas size to match container
+    canvas.width = containerRect.width
+    canvas.height = containerRect.height
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+    // Calculate video dimensions and positioning within container
+    const videoWidth = video.videoWidth || 1280
+    const videoHeight = video.videoHeight || 720
+    const videoAspectRatio = videoWidth / videoHeight
+    const containerAspectRatio = containerRect.width / containerRect.height
+
+    let displayedVideoWidth: number
+    let displayedVideoHeight: number
+    let videoOffsetX = 0
+    let videoOffsetY = 0
+
+    if (videoAspectRatio > containerAspectRatio) {
+      displayedVideoWidth = containerRect.width
+      displayedVideoHeight = containerRect.width / videoAspectRatio
+      videoOffsetX = 0
+      videoOffsetY = (containerRect.height - displayedVideoHeight) / 2
+    } else {
+      displayedVideoWidth = containerRect.height * videoAspectRatio
+      displayedVideoHeight = containerRect.height
+      videoOffsetX = (containerRect.width - displayedVideoWidth) / 2
+      videoOffsetY = 0
+    }
+
+    // Convert effect crop area to canvas coordinates
+    const effectStartX = effectCropArea.x * containerRect.width
+    const effectStartY = effectCropArea.y * containerRect.height
+    const effectWidth = effectCropArea.width * containerRect.width
+    const effectHeight = effectCropArea.height * containerRect.height
+
+    // Create a temporary canvas for the effect area
+    const tempCanvas = document.createElement("canvas")
+    const tempCtx = tempCanvas.getContext("2d")
+    if (!tempCtx) return
+
+    tempCanvas.width = effectWidth
+    tempCanvas.height = effectHeight
+
+    // Calculate the source rectangle on the video
+    const videoEffectStartX = (effectStartX - videoOffsetX) * (videoWidth / displayedVideoWidth)
+    const videoEffectStartY = (effectStartY - videoOffsetY) * (videoHeight / displayedVideoHeight)
+    const videoEffectWidth = effectWidth * (videoWidth / displayedVideoWidth)
+    const videoEffectHeight = effectHeight * (videoHeight / displayedVideoHeight)
+
+    // Clamp to video bounds
+    const clampedX = Math.max(0, Math.min(videoEffectStartX, videoWidth))
+    const clampedY = Math.max(0, Math.min(videoEffectStartY, videoHeight))
+    const clampedWidth = Math.max(1, Math.min(videoEffectWidth, videoWidth - clampedX))
+    const clampedHeight = Math.max(1, Math.min(videoEffectHeight, videoHeight - clampedY))
+
+    // Draw the video section to the temporary canvas
+    if (isMirrored) {
+      tempCtx.save()
+      tempCtx.scale(-1, 1)
+      tempCtx.drawImage(
+        video,
+        clampedX, clampedY, clampedWidth, clampedHeight,
+        -effectWidth, 0, effectWidth, effectHeight
+      )
+      tempCtx.restore()
+    } else {
+      tempCtx.drawImage(
+        video,
+        clampedX, clampedY, clampedWidth, clampedHeight,
+        0, 0, effectWidth, effectHeight
+      )
+    }
+
+    // Apply the effect
+    if (videoEffect === "blur") {
+      const blurAmount = effectIntensity * 2
+      
+      try {
+        // Method 1: Try CSS filter blur (most efficient)
+        const blurCanvas = document.createElement("canvas")
+        const blurCtx = blurCanvas.getContext("2d")
+        if (!blurCtx) return
+
+        blurCanvas.width = effectWidth
+        blurCanvas.height = effectHeight
+
+        // Apply blur using CSS filter
+        blurCtx.filter = `blur(${blurAmount}px)`
+        blurCtx.drawImage(tempCanvas, 0, 0)
+        
+        // Clear the temp canvas and draw the blurred version
+        tempCtx.clearRect(0, 0, effectWidth, effectHeight)
+        tempCtx.drawImage(blurCanvas, 0, 0)
+      } catch (error) {
+        // Fallback: Manual blur using multiple passes (less efficient but more compatible)
+        const imageData = tempCtx.getImageData(0, 0, effectWidth, effectHeight)
+        const blurredData = applyManualBlur(imageData, Math.ceil(blurAmount / 2))
+        tempCtx.putImageData(blurredData, 0, 0)
+      }
+    } else if (videoEffect === "pixelate") {
+      const pixelSize = Math.max(2, effectIntensity * 4)
+      const scaledWidth = Math.max(1, Math.floor(effectWidth / pixelSize))
+      const scaledHeight = Math.max(1, Math.floor(effectHeight / pixelSize))
+
+      // Create smaller canvas for pixelation
+      const pixelCanvas = document.createElement("canvas")
+      const pixelCtx = pixelCanvas.getContext("2d")
+      if (!pixelCtx) return
+
+      pixelCanvas.width = scaledWidth
+      pixelCanvas.height = scaledHeight
+
+      // Disable image smoothing for crisp pixels
+      pixelCtx.imageSmoothingEnabled = false
+      tempCtx.imageSmoothingEnabled = false
+
+      // Draw the image at reduced size
+      pixelCtx.drawImage(tempCanvas, 0, 0, effectWidth, effectHeight, 0, 0, scaledWidth, scaledHeight)
+      
+      // Clear the temp canvas and draw the pixelated version back at full size
+      tempCtx.clearRect(0, 0, effectWidth, effectHeight)
+      tempCtx.drawImage(pixelCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, effectWidth, effectHeight)
+    }
+
+    // Draw the processed area to the main canvas
+    ctx.drawImage(tempCanvas, 0, 0, effectWidth, effectHeight, effectStartX, effectStartY, effectWidth, effectHeight)
+
+    // Continue animation (works during recording too)
+    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect)) {
+      previewEffectAnimationRef.current = requestAnimationFrame(updateEffectPreview)
+    }
+  }, [isEffectCropMode, videoEffect, effectIntensity, effectCropArea, isMirrored, recordingState, applyManualBlur])
+
+  // Start/stop effect preview animation
+  useEffect(() => {
+    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect)) {
+      // Cancel any existing animation before starting a new one
+      if (previewEffectAnimationRef.current) {
+        cancelAnimationFrame(previewEffectAnimationRef.current)
+        previewEffectAnimationRef.current = null
+      }
+      updateEffectPreview()
+    } else if (previewEffectAnimationRef.current) {
+      cancelAnimationFrame(previewEffectAnimationRef.current)
+      previewEffectAnimationRef.current = null
+      if (previewEffectCanvasRef.current) {
+        previewEffectCanvasRef.current.style.display = "none"
+      }
+    }
+
+    return () => {
+      if (previewEffectAnimationRef.current) {
+        cancelAnimationFrame(previewEffectAnimationRef.current)
+        previewEffectAnimationRef.current = null
+      }
+    }
+  }, [isEffectCropMode, videoEffect, effectIntensity, recordingState, updateEffectPreview])
+
   // Create effect stream with blur or pixelation (with optional crop area)
   const createEffectStream = useCallback(() => {
     if (!effectCanvasRef.current || !videoRef.current || !streamRef.current) return null
@@ -844,7 +1062,7 @@ export default function CameraRecorder() {
       }
 
       // Apply effect to specific area if effect crop mode is enabled
-      if (isEffectCropMode && videoEffect !== "none" && videoContainerRef.current) {
+      if (isEffectCropMode && videoEffect !== ("none" as VideoEffect) && videoContainerRef.current) {
         const videoWidth = video.videoWidth || 1280
         const videoHeight = video.videoHeight || 720
         const videoAspectRatio = videoWidth / videoHeight
@@ -942,7 +1160,7 @@ export default function CameraRecorder() {
 
         // Draw the affected area back to the main canvas
         ctx.drawImage(tempCanvas, 0, 0, clampedWidth, clampedHeight, clampedX, clampedY, clampedWidth, clampedHeight)
-      } else if (videoEffect !== "none" && !isEffectCropMode) {
+      } else if (videoEffect !== ("none" as VideoEffect) && !isEffectCropMode) {
         // Apply effect to entire video
         if (videoEffect === "blur") {
           const blurAmount = effectIntensity * 2
@@ -1221,6 +1439,117 @@ export default function CameraRecorder() {
     [screenshots.length],
   )
 
+  // Apply effects to screenshot canvas
+  const applyEffectToScreenshot = useCallback((ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, mode: "crop" | "full") => {
+    if (!videoContainerRef.current) return
+
+    let effectAreaInCanvas = { x: 0, y: 0, width: canvas.width, height: canvas.height }
+
+    if (mode === "full") {
+      // For full screenshot, calculate effect area position
+      const video = videoRef.current
+      if (!video) return
+
+      const videoWidth = video.videoWidth || 1280
+      const videoHeight = video.videoHeight || 720
+      const videoAspectRatio = videoWidth / videoHeight
+
+      const containerRect = videoContainerRef.current.getBoundingClientRect()
+      const containerAspectRatio = containerRect.width / containerRect.height
+
+      let displayedVideoWidth: number
+      let displayedVideoHeight: number
+      let videoOffsetX = 0
+      let videoOffsetY = 0
+
+      if (videoAspectRatio > containerAspectRatio) {
+        displayedVideoWidth = containerRect.width
+        displayedVideoHeight = containerRect.width / videoAspectRatio
+        videoOffsetX = 0
+        videoOffsetY = (containerRect.height - displayedVideoHeight) / 2
+      } else {
+        displayedVideoWidth = containerRect.height * videoAspectRatio
+        displayedVideoHeight = containerRect.height
+        videoOffsetX = (containerRect.width - displayedVideoWidth) / 2
+        videoOffsetY = 0
+      }
+
+      const effectStartX = effectCropArea.x * containerRect.width
+      const effectStartY = effectCropArea.y * containerRect.height
+      const effectWidth = effectCropArea.width * containerRect.width
+      const effectHeight = effectCropArea.height * containerRect.height
+
+      const videoEffectStartX = (effectStartX - videoOffsetX) * (videoWidth / displayedVideoWidth)
+      const videoEffectStartY = (effectStartY - videoOffsetY) * (videoHeight / displayedVideoHeight)
+      const videoEffectWidth = effectWidth * (videoWidth / displayedVideoWidth)
+      const videoEffectHeight = effectHeight * (videoHeight / displayedVideoHeight)
+
+      effectAreaInCanvas = {
+        x: Math.max(0, Math.min(videoEffectStartX, videoWidth)),
+        y: Math.max(0, Math.min(videoEffectStartY, videoHeight)),
+        width: Math.max(1, Math.min(videoEffectWidth, videoWidth - Math.max(0, videoEffectStartX))),
+        height: Math.max(1, Math.min(videoEffectHeight, videoHeight - Math.max(0, videoEffectStartY)))
+      }
+    } else {
+      // For crop mode, apply effect to the whole cropped area for simplicity
+      // You could enhance this to calculate intersection if needed
+      effectAreaInCanvas = { x: 0, y: 0, width: canvas.width, height: canvas.height }
+    }
+
+    // Extract the effect area
+    const imageData = ctx.getImageData(effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
+
+    if (videoEffect === "blur") {
+      const blurAmount = effectIntensity * 2
+      try {
+        // Create blur canvas
+        const blurCanvas = document.createElement("canvas")
+        const blurCtx = blurCanvas.getContext("2d")
+        if (blurCtx) {
+          blurCanvas.width = effectAreaInCanvas.width
+          blurCanvas.height = effectAreaInCanvas.height
+          blurCtx.putImageData(imageData, 0, 0)
+          blurCtx.filter = `blur(${blurAmount}px)`
+          blurCtx.drawImage(blurCanvas, 0, 0)
+          ctx.drawImage(blurCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
+        }
+      } catch (error) {
+        // Fallback to manual blur
+        const blurredData = applyManualBlur(imageData, Math.ceil(blurAmount / 2))
+        ctx.putImageData(blurredData, effectAreaInCanvas.x, effectAreaInCanvas.y)
+      }
+    } else if (videoEffect === "pixelate") {
+      const pixelSize = Math.max(2, effectIntensity * 4)
+      const scaledWidth = Math.max(1, Math.floor(effectAreaInCanvas.width / pixelSize))
+      const scaledHeight = Math.max(1, Math.floor(effectAreaInCanvas.height / pixelSize))
+
+      const pixelCanvas = document.createElement("canvas")
+      const pixelCtx = pixelCanvas.getContext("2d")
+      if (pixelCtx) {
+        pixelCanvas.width = scaledWidth
+        pixelCanvas.height = scaledHeight
+        pixelCtx.imageSmoothingEnabled = false
+
+        // Draw reduced size
+        pixelCtx.putImageData(imageData, 0, 0)
+        const tempCanvas = document.createElement("canvas")
+        const tempCtx = tempCanvas.getContext("2d")
+        if (tempCtx) {
+          tempCanvas.width = effectAreaInCanvas.width
+          tempCanvas.height = effectAreaInCanvas.height
+          tempCtx.putImageData(imageData, 0, 0)
+          pixelCtx.drawImage(tempCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, 0, 0, scaledWidth, scaledHeight)
+
+          // Draw back at full size
+          tempCtx.imageSmoothingEnabled = false
+          tempCtx.clearRect(0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height)
+          tempCtx.drawImage(pixelCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height)
+          ctx.drawImage(tempCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
+        }
+      }
+    }
+  }, [videoRef, videoContainerRef, effectCropArea, videoEffect, effectIntensity, applyManualBlur])
+
   // Take screenshot (with crop if enabled and timer support)
   const takeScreenshot = useCallback(
     async (withTimer = true) => {
@@ -1229,7 +1558,7 @@ export default function CameraRecorder() {
       // If timer is set and this is a manual trigger, start countdown
       if (withTimer && screenshotTimer > 0 && !isTimerActive) {
         setIsTimerActive(true)
-        const countdown = screenshotTimer
+        setTimerCountdown(screenshotTimer) // Initialize countdown with the timer value
 
         const countdownInterval = setInterval(() => {
           setTimerCountdown((prev) => {
@@ -1348,6 +1677,11 @@ export default function CameraRecorder() {
         }
       }
 
+      // Apply effects if enabled
+      if (isEffectCropMode && videoEffect !== ("none" as VideoEffect)) {
+        applyEffectToScreenshot(ctx, canvas, isCropMode ? "crop" : "full")
+      }
+
       // Show flash effect
       setShowFlash(true)
       setTimeout(() => setShowFlash(false), 200)
@@ -1379,7 +1713,7 @@ export default function CameraRecorder() {
         quality,
       )
     },
-    [recordingState, screenshotFormat, isCropMode, cropArea, screenshotTimer, isTimerActive, isFullscreen, isMirrored],
+    [recordingState, screenshotFormat, isCropMode, cropArea, screenshotTimer, isTimerActive, isFullscreen, isMirrored, isEffectCropMode, videoEffect, effectIntensity, applyEffectToScreenshot],
   )
 
   // Cancel screenshot timer
@@ -1522,7 +1856,7 @@ export default function CameraRecorder() {
 
       // Use effect stream if any effect is enabled, cropped stream if crop mode is enabled, or mirrored stream if mirror mode is enabled
       let recordingStream = streamRef.current
-      if (videoEffect !== "none" || isEffectCropMode) {
+      if (videoEffect !== ("none" as VideoEffect) || isEffectCropMode) {
         const effectStream = createEffectStream()
         if (effectStream) {
           recordingStream = effectStream
@@ -2003,9 +2337,9 @@ export default function CameraRecorder() {
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-slate-800 flex items-center justify-center gap-2">
             <Video className="w-8 h-8 text-blue-600" />
-            Camera Recorder & Editor
+            FlexiCam Studio
           </h1>
-          <p className="text-slate-600">Record, edit, and download your videos with ease</p>
+          <p className="text-slate-600">Professional camera recorder & video editor with real-time effects</p>
 
           {/* Format Support Status */}
           <div className="flex items-center justify-center gap-4 text-sm">
@@ -2035,7 +2369,7 @@ export default function CameraRecorder() {
                 Mirrored
               </Badge>
             )}
-            {videoEffect !== "none" && (
+            {videoEffect !== ("none" as VideoEffect) && (
               <Badge variant="outline" className="text-xs border-purple-300 text-purple-600">
                 {videoEffect === "blur" ? "Blur" : "Pixelate"} {effectIntensity}
                 {isEffectCropMode && " (Area)"}
@@ -2313,7 +2647,7 @@ export default function CameraRecorder() {
                     </Select>
                   </div>
 
-                  {videoEffect !== "none" && (
+                  {videoEffect !== ("none" as VideoEffect) && (
                     <>
                       <div className="flex items-center gap-2">
                         <label className="text-sm font-medium">Intensity:</label>
@@ -2347,7 +2681,7 @@ export default function CameraRecorder() {
                   )}
                 </div>
 
-                {videoEffect !== "none" && isEffectCropMode && (
+                {videoEffect !== ("none" as VideoEffect) && isEffectCropMode && (
                   <div className="text-center text-sm text-slate-600 bg-purple-50 rounded-lg p-3">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2538,9 +2872,19 @@ export default function CameraRecorder() {
                 </div>
               )}
 
+              {/* Real-time Effect Preview Canvas */}
+              <canvas
+                ref={previewEffectCanvasRef}
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  display: "none",
+                  zIndex: 5,
+                }}
+              />
+
               {/* Effect Crop Overlay */}
-              {isEffectCropMode && recordingState === "idle" && videoEffect !== "none" && (
-                <div className="absolute inset-0 pointer-events-none">
+              {isEffectCropMode && recordingState === "idle" && videoEffect !== ("none" as VideoEffect) && (
+                <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
                   {/* Effect crop area overlay */}
                   <div
                     className="absolute border-2 border-purple-400 bg-purple-400/10 cursor-move pointer-events-auto"
@@ -2884,7 +3228,7 @@ export default function CameraRecorder() {
                         ))}
                       </div>
 
-                      {videoEffect !== "none" && (
+                      {videoEffect !== ("none" as VideoEffect) && (
                         <>
                           <div className="flex items-center gap-1">
                             <span className="text-white text-xs font-medium mr-1">Level:</span>
@@ -3070,7 +3414,7 @@ export default function CameraRecorder() {
               )}
 
               {/* Effect Info */}
-              {recordingState === "idle" && videoEffect !== "none" && (
+              {recordingState === "idle" && videoEffect !== ("none" as VideoEffect) && (
                 <div className="text-center text-sm text-slate-600 bg-purple-50 rounded-lg p-3">
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3457,6 +3801,7 @@ export default function CameraRecorder() {
         <canvas ref={screenshotCanvasRef} className="hidden" />
         <canvas ref={cropCanvasRef} className="hidden" />
         <canvas ref={effectCanvasRef} className="hidden" />
+        {/* Preview effect canvas is already in the video container */}
 
         {/* Instructions */}
         <Card>
