@@ -64,6 +64,9 @@ export default function CameraRecorder() {
   const [screenshotCount, setScreenshotCount] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
+  // Add mounted state to prevent hydration errors
+  const [isMounted, setIsMounted] = useState(false)
+
   // Timer functionality for screenshots
   const [screenshotTimer, setScreenshotTimer] = useState<number>(0) // 0 = no timer
   const [isTimerActive, setIsTimerActive] = useState(false)
@@ -120,6 +123,80 @@ export default function CameraRecorder() {
   const chunksRef = useRef<Blob[]>([])
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const previewEffectAnimationRef = useRef<number | null>(null)
+
+  // Helper function to calculate actual video display area within container
+  const getVideoDisplayArea = useCallback(() => {
+    if (!videoRef.current || !videoContainerRef.current) {
+      return {
+        displayedVideoWidth: 0,
+        displayedVideoHeight: 0,
+        videoOffsetX: 0,
+        videoOffsetY: 0,
+        containerWidth: 0,
+        containerHeight: 0
+      }
+    }
+
+    const video = videoRef.current
+    const container = videoContainerRef.current
+    
+    const videoWidth = video.videoWidth || 1280
+    const videoHeight = video.videoHeight || 720
+    const videoAspectRatio = videoWidth / videoHeight
+    
+    const containerRect = container.getBoundingClientRect()
+    const containerAspectRatio = containerRect.width / containerRect.height
+    
+    let displayedVideoWidth: number
+    let displayedVideoHeight: number
+    let videoOffsetX = 0
+    let videoOffsetY = 0
+    
+    // Use a small tolerance for aspect ratio comparison to handle floating point precision
+    const aspectRatioTolerance = 0.01
+    const aspectRatioDiff = Math.abs(videoAspectRatio - containerAspectRatio)
+    
+    if (aspectRatioDiff < aspectRatioTolerance) {
+      // Aspect ratios are essentially the same - video fills container
+      displayedVideoWidth = containerRect.width
+      displayedVideoHeight = containerRect.height
+      videoOffsetX = 0
+      videoOffsetY = 0
+    } else if (videoAspectRatio > containerAspectRatio) {
+      // Video is wider than container - constrain by width (letterboxed)
+      displayedVideoWidth = containerRect.width
+      displayedVideoHeight = containerRect.width / videoAspectRatio
+      videoOffsetX = 0
+      videoOffsetY = (containerRect.height - displayedVideoHeight) / 2
+    } else {
+      // Video is taller than container - constrain by height (pillarboxed)
+      displayedVideoWidth = containerRect.height * videoAspectRatio
+      displayedVideoHeight = containerRect.height
+      videoOffsetX = (containerRect.width - displayedVideoWidth) / 2
+      videoOffsetY = 0
+    }
+    
+    // Debug logging for vertical mode
+    if (aspectRatio === "9:16") {
+      console.log(`📐 Video Display Area (${aspectRatio}):`, {
+        video: { width: videoWidth, height: videoHeight, aspectRatio: videoAspectRatio },
+        container: { width: containerRect.width, height: containerRect.height, aspectRatio: containerAspectRatio },
+        displayed: { width: displayedVideoWidth, height: displayedVideoHeight },
+        offset: { x: videoOffsetX, y: videoOffsetY },
+        aspectRatioDiff,
+        tolerance: 0.01
+      })
+    }
+    
+    return {
+      displayedVideoWidth,
+      displayedVideoHeight,
+      videoOffsetX,
+      videoOffsetY,
+      containerWidth: containerRect.width,
+      containerHeight: containerRect.height
+    }
+  }, [])
 
   // Utility function to download blob with better file handling
   const downloadBlob = useCallback(
@@ -673,17 +750,33 @@ export default function CameraRecorder() {
 
       switch (aspectRatio) {
         case "9:16":
-          videoConstraints = { width: 720, height: 1280 } // Vertical
+          videoConstraints = { 
+            width: { ideal: 720, min: 480, max: 1080 }, 
+            height: { ideal: 1280, min: 854, max: 1920 },
+            aspectRatio: 9/16
+          } // Vertical
           break
         case "4:3":
-          videoConstraints = { width: 960, height: 720 } // Classic
+          videoConstraints = { 
+            width: { ideal: 960, min: 640, max: 1440 }, 
+            height: { ideal: 720, min: 480, max: 1080 },
+            aspectRatio: 4/3
+          } // Classic
           break
         case "1:1":
-          videoConstraints = { width: 720, height: 720 } // Square
+          videoConstraints = { 
+            width: { ideal: 720, min: 480, max: 1080 }, 
+            height: { ideal: 720, min: 480, max: 1080 },
+            aspectRatio: 1
+          } // Square
           break
         case "16:9":
         default:
-          videoConstraints = { width: 1280, height: 720 } // Landscape
+          videoConstraints = { 
+            width: { ideal: 1280, min: 854, max: 1920 }, 
+            height: { ideal: 720, min: 480, max: 1080 },
+            aspectRatio: 16/9
+          } // Landscape
           break
       }
 
@@ -694,6 +787,19 @@ export default function CameraRecorder() {
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
+        
+        // Debug: Log actual video dimensions once video loads
+        videoRef.current.onloadedmetadata = () => {
+          console.log(`📹 Camera for ${aspectRatio}:`, {
+            requested: videoConstraints,
+            actual: {
+              width: videoRef.current?.videoWidth,
+              height: videoRef.current?.videoHeight,
+              aspectRatio: (videoRef.current?.videoWidth || 0) / (videoRef.current?.videoHeight || 1)
+            },
+            containerExpected: aspectRatio === "9:16" ? 9/16 : aspectRatio === "4:3" ? 4/3 : aspectRatio === "1:1" ? 1 : 16/9
+          })
+        }
       }
     } catch (error) {
       console.error("Error accessing camera:", error)
@@ -730,20 +836,30 @@ export default function CameraRecorder() {
       containerAspectRatio = containerRect.width / containerRect.height
     }
 
-    // Calculate how the video is actually displayed within the container
+    // Calculate how the video is actually displayed within the container (using same logic as getVideoDisplayArea)
     let displayedVideoWidth: number
     let displayedVideoHeight: number
     let videoOffsetX = 0
     let videoOffsetY = 0
 
-    if (videoAspectRatio > containerAspectRatio) {
-      // Video is wider than container - video fills width, letterboxed (black bars top/bottom)
+    // Use a small tolerance for aspect ratio comparison to handle floating point precision
+    const aspectRatioTolerance = 0.01
+    const aspectRatioDiff = Math.abs(videoAspectRatio - containerAspectRatio)
+    
+    if (aspectRatioDiff < aspectRatioTolerance) {
+      // Aspect ratios are essentially the same - video fills container
+      displayedVideoWidth = containerRect.width
+      displayedVideoHeight = containerRect.height
+      videoOffsetX = 0
+      videoOffsetY = 0
+    } else if (videoAspectRatio > containerAspectRatio) {
+      // Video is wider than container - constrain by width (letterboxed)
       displayedVideoWidth = containerRect.width
       displayedVideoHeight = containerRect.width / videoAspectRatio
       videoOffsetX = 0
       videoOffsetY = (containerRect.height - displayedVideoHeight) / 2
     } else {
-      // Video is taller than container - video fills height, pillarboxed (black bars left/right)
+      // Video is taller than container - constrain by height (pillarboxed)
       displayedVideoWidth = containerRect.height * videoAspectRatio
       displayedVideoHeight = containerRect.height
       videoOffsetX = (containerRect.width - displayedVideoWidth) / 2
@@ -1080,18 +1196,30 @@ export default function CameraRecorder() {
           containerAspectRatio = containerRect.width / containerRect.height
         }
 
-        // Calculate how the video is displayed within the container
+        // Calculate how the video is displayed within the container (using same logic as getVideoDisplayArea)
         let displayedVideoWidth: number
         let displayedVideoHeight: number
         let videoOffsetX = 0
         let videoOffsetY = 0
 
-        if (videoAspectRatio > containerAspectRatio) {
+        // Use a small tolerance for aspect ratio comparison to handle floating point precision
+        const aspectRatioTolerance = 0.01
+        const aspectRatioDiff = Math.abs(videoAspectRatio - containerAspectRatio)
+        
+        if (aspectRatioDiff < aspectRatioTolerance) {
+          // Aspect ratios are essentially the same - video fills container
+          displayedVideoWidth = containerRect.width
+          displayedVideoHeight = containerRect.height
+          videoOffsetX = 0
+          videoOffsetY = 0
+        } else if (videoAspectRatio > containerAspectRatio) {
+          // Video is wider than container - constrain by width (letterboxed)
           displayedVideoWidth = containerRect.width
           displayedVideoHeight = containerRect.width / videoAspectRatio
           videoOffsetX = 0
           videoOffsetY = (containerRect.height - displayedVideoHeight) / 2
         } else {
+          // Video is taller than container - constrain by height (pillarboxed)
           displayedVideoWidth = containerRect.height * videoAspectRatio
           displayedVideoHeight = containerRect.height
           videoOffsetX = (containerRect.width - displayedVideoWidth) / 2
@@ -1239,8 +1367,11 @@ export default function CameraRecorder() {
     e.stopPropagation()
 
     const rect = videoContainerRef.current.getBoundingClientRect()
-    const x = (e.clientX - rect.left) / rect.width
-    const y = (e.clientY - rect.top) / rect.height
+    const videoArea = getVideoDisplayArea()
+    
+    // Convert mouse coordinates relative to the actual video display area
+    const relativeX = (e.clientX - rect.left - videoArea.videoOffsetX) / videoArea.displayedVideoWidth
+    const relativeY = (e.clientY - rect.top - videoArea.videoOffsetY) / videoArea.displayedVideoHeight
 
     setDragStart({ x: e.clientX, y: e.clientY })
 
@@ -1250,7 +1381,7 @@ export default function CameraRecorder() {
     } else {
       setIsDragging(true)
     }
-  }, [])
+  }, [getVideoDisplayArea])
 
   // Handle effect crop area mouse events
   const handleEffectCropMouseDown = useCallback((e: React.MouseEvent, handle?: string) => {
@@ -1260,8 +1391,11 @@ export default function CameraRecorder() {
     e.stopPropagation()
 
     const rect = videoContainerRef.current.getBoundingClientRect()
-    const x = (e.clientX - rect.left) / rect.width
-    const y = (e.clientY - rect.top) / rect.height
+    const videoArea = getVideoDisplayArea()
+    
+    // Convert mouse coordinates relative to the actual video display area
+    const relativeX = (e.clientX - rect.left - videoArea.videoOffsetX) / videoArea.displayedVideoWidth
+    const relativeY = (e.clientY - rect.top - videoArea.videoOffsetY) / videoArea.displayedVideoHeight
 
     setEffectDragStart({ x: e.clientX, y: e.clientY })
 
@@ -1271,18 +1405,19 @@ export default function CameraRecorder() {
     } else {
       setIsEffectDragging(true)
     }
-  }, [])
+  }, [getVideoDisplayArea])
 
   const handleCropMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!videoContainerRef.current || (!isDragging && !isResizing && !isEffectDragging && !isEffectResizing)) return
 
       const rect = videoContainerRef.current.getBoundingClientRect()
+      const videoArea = getVideoDisplayArea()
 
       // Handle regular crop area
       if (isDragging || isResizing) {
-        const deltaX = (e.clientX - dragStart.x) / rect.width
-        const deltaY = (e.clientY - dragStart.y) / rect.height
+        const deltaX = (e.clientX - dragStart.x) / videoArea.displayedVideoWidth
+        const deltaY = (e.clientY - dragStart.y) / videoArea.displayedVideoHeight
 
         if (isDragging) {
           setCropArea((prev) => ({
@@ -1326,8 +1461,8 @@ export default function CameraRecorder() {
 
       // Handle effect crop area
       if (isEffectDragging || isEffectResizing) {
-        const deltaX = (e.clientX - effectDragStart.x) / rect.width
-        const deltaY = (e.clientY - effectDragStart.y) / rect.height
+        const deltaX = (e.clientX - effectDragStart.x) / videoArea.displayedVideoWidth
+        const deltaY = (e.clientY - effectDragStart.y) / videoArea.displayedVideoHeight
 
         if (isEffectDragging) {
           setEffectCropArea((prev) => ({
@@ -1378,6 +1513,7 @@ export default function CameraRecorder() {
       effectDragStart,
       resizeHandle,
       effectResizeHandle,
+      getVideoDisplayArea,
     ],
   )
 
@@ -1510,8 +1646,7 @@ export default function CameraRecorder() {
           blurCanvas.height = effectAreaInCanvas.height
           blurCtx.putImageData(imageData, 0, 0)
           blurCtx.filter = `blur(${blurAmount}px)`
-          blurCtx.drawImage(blurCanvas, 0, 0)
-          ctx.drawImage(blurCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
+          blurCtx.drawImage(blurCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
         }
       } catch (error) {
         // Fallback to manual blur
@@ -1603,20 +1738,30 @@ export default function CameraRecorder() {
 
         const containerAspectRatio = containerRect.width / containerRect.height
 
-        // Calculate how the video is actually displayed within the container
+        // Calculate how the video is actually displayed within the container (using same logic as getVideoDisplayArea)
         let displayedVideoWidth: number
         let displayedVideoHeight: number
         let videoOffsetX = 0
         let videoOffsetY = 0
 
-        if (videoAspectRatio > containerAspectRatio) {
-          // Video is wider than container - video fills width, letterboxed
+        // Use a small tolerance for aspect ratio comparison to handle floating point precision
+        const aspectRatioTolerance = 0.01
+        const aspectRatioDiff = Math.abs(videoAspectRatio - containerAspectRatio)
+        
+        if (aspectRatioDiff < aspectRatioTolerance) {
+          // Aspect ratios are essentially the same - video fills container
+          displayedVideoWidth = containerRect.width
+          displayedVideoHeight = containerRect.height
+          videoOffsetX = 0
+          videoOffsetY = 0
+        } else if (videoAspectRatio > containerAspectRatio) {
+          // Video is wider than container - constrain by width (letterboxed)
           displayedVideoWidth = containerRect.width
           displayedVideoHeight = containerRect.width / videoAspectRatio
           videoOffsetX = 0
           videoOffsetY = (containerRect.height - displayedVideoHeight) / 2
         } else {
-          // Video is taller than container - video fills height, pillarboxed
+          // Video is taller than container - constrain by height (pillarboxed)
           displayedVideoWidth = containerRect.height * videoAspectRatio
           displayedVideoHeight = containerRect.height
           videoOffsetX = (containerRect.width - displayedVideoWidth) / 2
@@ -1663,17 +1808,120 @@ export default function CameraRecorder() {
           ctx.drawImage(video, clampedX, clampedY, clampedWidth, clampedHeight, 0, 0, clampedWidth, clampedHeight)
         }
       } else {
-        // Full screenshot
-        canvas.width = video.videoWidth || 1280
-        canvas.height = video.videoHeight || 720
-
+        // Full screenshot - capture in the selected aspect ratio
+        const videoWidth = video.videoWidth || 1280
+        const videoHeight = video.videoHeight || 720
+        const videoAspectRatio = videoWidth / videoHeight
+        
+        // Calculate target aspect ratio
+        let targetAspectRatio: number
+        switch (aspectRatio) {
+          case "9:16":
+            targetAspectRatio = 9 / 16
+            break
+          case "4:3":
+            targetAspectRatio = 4 / 3
+            break
+          case "1:1":
+            targetAspectRatio = 1
+            break
+          default: // "16:9"
+            targetAspectRatio = 16 / 9
+            break
+        }
+        
+        // Calculate screenshot dimensions based on selected aspect ratio
+        let screenshotWidth: number
+        let screenshotHeight: number
+        
+        // Use exact dimensions for each aspect ratio to avoid any rounding issues
+        switch (aspectRatio) {
+          case "9:16":
+            screenshotWidth = 1080
+            screenshotHeight = 1920
+            break
+          case "4:3":
+            screenshotWidth = 1440
+            screenshotHeight = 1080
+            break
+          case "1:1":
+            screenshotWidth = 1080
+            screenshotHeight = 1080
+            break
+          default: // "16:9"
+            screenshotWidth = 1920
+            screenshotHeight = 1080
+            break
+        }
+        
+        canvas.width = screenshotWidth
+        canvas.height = screenshotHeight
+        
+        // Debug screenshot dimensions
+        console.log(`📸 Screenshot FINAL dimensions for ${aspectRatio}:`, {
+          targetAspectRatio,
+          screenshotSize: { width: screenshotWidth, height: screenshotHeight },
+          actualAspectRatio: screenshotWidth / screenshotHeight,
+          videoSize: { width: videoWidth, height: videoHeight, aspectRatio: videoAspectRatio },
+          isVertical: screenshotHeight > screenshotWidth,
+          expectedVertical: aspectRatio === "9:16"
+        })
+        
+        // Clear canvas with black background
+        ctx.fillStyle = '#000000'
+        ctx.fillRect(0, 0, screenshotWidth, screenshotHeight)
+        
+        // Calculate how to fit the video into the screenshot canvas
+        let drawWidth: number
+        let drawHeight: number
+        let drawX = 0
+        let drawY = 0
+        
+        // For vertical screenshots (9:16), we want to fill the height and center horizontally
+        if (aspectRatio === "9:16") {
+          // Always fill the height for vertical screenshots
+          drawHeight = screenshotHeight
+          drawWidth = Math.round(screenshotHeight * videoAspectRatio)
+          drawX = Math.round((screenshotWidth - drawWidth) / 2)
+          
+          console.log(`📐 Vertical screenshot fitting:`, {
+            videoAspectRatio,
+            drawSize: { width: drawWidth, height: drawHeight },
+            drawPosition: { x: drawX, y: drawY },
+            willFillHeight: true
+          })
+        } else if (Math.abs(videoAspectRatio - targetAspectRatio) < 0.01) {
+          // Video aspect ratio matches target - fill entire canvas
+          drawWidth = screenshotWidth
+          drawHeight = screenshotHeight
+        } else if (videoAspectRatio > targetAspectRatio) {
+          // Video is wider - fit by height (letterbox)
+          drawHeight = screenshotHeight
+          drawWidth = Math.round(screenshotHeight * videoAspectRatio)
+          drawX = Math.round((screenshotWidth - drawWidth) / 2)
+        } else {
+          // Video is taller - fit by width (pillarbox)
+          drawWidth = screenshotWidth
+          drawHeight = Math.round(screenshotWidth / videoAspectRatio)
+          drawY = Math.round((screenshotHeight - drawHeight) / 2)
+        }
+        
+        // Draw the video
         if (isMirrored) {
           ctx.save()
           ctx.scale(-1, 1)
-          ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height)
+          ctx.drawImage(
+            video,
+            0, 0, videoWidth, videoHeight,
+            -(drawX + drawWidth), drawY, drawWidth, drawHeight
+          )
           ctx.restore()
         } else {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+          ctx.drawImage(
+            video,
+            0, 0, videoWidth, videoHeight,
+            drawX, drawY, drawWidth, drawHeight
+          )
         }
       }
 
@@ -1688,6 +1936,16 @@ export default function CameraRecorder() {
 
       // Convert canvas to blob
       const quality = screenshotFormat === "jpeg" ? 0.9 : undefined
+      
+      // Final debug log before saving
+      console.log(`💾 Saving screenshot with canvas dimensions:`, {
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height,
+        aspectRatio: canvas.width / canvas.height,
+        expectedAspectRatio: aspectRatio,
+        isCorrectVertical: aspectRatio === "9:16" && canvas.height > canvas.width
+      })
+      
       canvas.toBlob(
         (blob) => {
           if (blob) {
@@ -1704,6 +1962,8 @@ export default function CameraRecorder() {
 
               setScreenshots((prev) => [newScreenshot, ...prev.slice(0, 4)]) // Keep last 5 screenshots
               setScreenshotCount((prev) => prev + 1)
+              
+              console.log(`✅ Screenshot saved successfully! Check if it's vertical: ${canvas.height > canvas.width}`)
             } catch (error) {
               console.error("Error creating screenshot:", error)
             }
@@ -1713,7 +1973,7 @@ export default function CameraRecorder() {
         quality,
       )
     },
-    [recordingState, screenshotFormat, isCropMode, cropArea, screenshotTimer, isTimerActive, isFullscreen, isMirrored, isEffectCropMode, videoEffect, effectIntensity, applyEffectToScreenshot],
+    [recordingState, screenshotFormat, isCropMode, cropArea, screenshotTimer, isTimerActive, isFullscreen, isMirrored, isEffectCropMode, videoEffect, effectIntensity, applyEffectToScreenshot, aspectRatio, getVideoDisplayArea],
   )
 
   // Cancel screenshot timer
@@ -2130,8 +2390,15 @@ export default function CameraRecorder() {
     }
   }, [resetZoom])
 
-  // Initialize camera on mount
+  // Set mounted state to prevent hydration errors
   useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Initialize camera on mount (only on client side)
+  useEffect(() => {
+    if (!isMounted) return
+    
     initializeCamera()
 
     return () => {
@@ -2160,7 +2427,7 @@ export default function CameraRecorder() {
         return []
       })
     }
-  }, [initializeCamera])
+  }, [isMounted, initializeCamera])
 
   // Update video time
   useEffect(() => {
@@ -2413,7 +2680,7 @@ export default function CameraRecorder() {
                       <img
                         src={screenshot.url || "/placeholder.svg"}
                         alt="Screenshot"
-                        className="w-24 h-16 object-cover rounded border-2 border-transparent group-hover:border-blue-400 transition-all cursor-pointer"
+                        className="w-16 h-24 object-contain bg-gray-100 rounded border-2 border-transparent group-hover:border-blue-400 transition-all cursor-pointer"
                         onClick={() => openScreenshotModal(index)}
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded flex items-center justify-center">
@@ -2763,13 +3030,7 @@ export default function CameraRecorder() {
               ref={videoContainerRef}
               className={`relative bg-black rounded-lg overflow-hidden ${
                 !isFullscreen
-                  ? aspectRatio === "16:9"
-                    ? "aspect-video"
-                    : aspectRatio === "9:16"
-                      ? "aspect-[9/16]"
-                      : aspectRatio === "4:3"
-                        ? "aspect-[4/3]"
-                        : "aspect-square"
+                  ? "w-full"
                   : "fixed inset-0 z-50 rounded-none flex items-center justify-center"
               }`}
               style={
@@ -2777,7 +3038,11 @@ export default function CameraRecorder() {
                   ? {
                       backgroundColor: "black",
                     }
-                  : {}
+                  : {
+                      aspectRatio: aspectRatio === "16:9" ? "16/9" : 
+                                   aspectRatio === "9:16" ? "9/16" :
+                                   aspectRatio === "4:3" ? "4/3" : "1/1"
+                    }
               }
             >
               <div
@@ -2799,78 +3064,91 @@ export default function CameraRecorder() {
                 }}
                 onMouseDown={handlePanStart}
               >
-                <video
-                  ref={videoRef}
-                  className="w-full h-full object-cover"
-                  style={{
-                    transform: isMirrored ? "scaleX(-1)" : "none",
-                    filter:
-                      videoEffect === "blur" && !isEffectCropMode
-                        ? `blur(${effectIntensity * 2}px)`
-                        : videoEffect === "pixelate" && !isEffectCropMode
-                          ? `contrast(1.2) saturate(1.1)`
-                          : "none",
-                    imageRendering: videoEffect === "pixelate" && !isEffectCropMode ? "pixelated" : "auto",
-                  }}
-                  autoPlay
-                  muted={recordingState === "idle" || recordingState === "recording"}
-                  playsInline
-                />
+                {isMounted ? (
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-contain"
+                    style={{
+                      transform: isMirrored ? "scaleX(-1)" : "none",
+                      filter:
+                        videoEffect === "blur" && !isEffectCropMode
+                          ? `blur(${effectIntensity * 2}px)`
+                          : videoEffect === "pixelate" && !isEffectCropMode
+                            ? `contrast(1.2) saturate(1.1)`
+                            : "none",
+                      imageRendering: videoEffect === "pixelate" && !isEffectCropMode ? "pixelated" : "auto",
+                    }}
+                    autoPlay
+                    muted={recordingState === "idle" || recordingState === "recording"}
+                    playsInline
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                    <div className="text-white text-center">
+                      <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg opacity-75">Camera Loading...</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Crop Overlay */}
-              {isCropMode && recordingState === "idle" && (
-                <div className="absolute inset-0 pointer-events-none">
-                  {/* Crop area overlay */}
-                  <div
-                    className="absolute border-2 border-orange-400 bg-orange-400/10 cursor-move pointer-events-auto"
-                    style={{
-                      left: `${cropArea.x * 100}%`,
-                      top: `${cropArea.y * 100}%`,
-                      width: `${cropArea.width * 100}%`,
-                      height: `${cropArea.height * 100}%`,
-                    }}
-                    onMouseDown={(e) => handleCropMouseDown(e)}
-                  >
-                    {/* Resize handles */}
+              {isMounted && isCropMode && recordingState === "idle" && (() => {
+                const videoArea = getVideoDisplayArea()
+                const cropOverlay = (
+                  <div key="crop-overlay" className="absolute inset-0 pointer-events-none">
+                    {/* Crop area overlay - positioned relative to actual video display area */}
                     <div
-                      className="absolute -top-1 -left-1 w-3 h-3 bg-orange-400 border border-white cursor-nw-resize pointer-events-auto"
-                      onMouseDown={(e) => handleCropMouseDown(e, "nw")}
-                    />
-                    <div
-                      className="absolute -top-1 -right-1 w-3 h-3 bg-orange-400 border border-white cursor-ne-resize pointer-events-auto"
-                      onMouseDown={(e) => handleCropMouseDown(e, "ne")}
-                    />
-                    <div
-                      className="absolute -bottom-1 -left-1 w-3 h-3 bg-orange-400 border border-white cursor-sw-resize pointer-events-auto"
-                      onMouseDown={(e) => handleCropMouseDown(e, "sw")}
-                    />
-                    <div
-                      className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-400 border border-white cursor-se-resize pointer-events-auto"
-                      onMouseDown={(e) => handleCropMouseDown(e, "se")}
-                    />
+                      className="absolute border-2 border-orange-400 bg-orange-400/10 cursor-move pointer-events-auto"
+                      style={{
+                        left: `${videoArea.videoOffsetX + cropArea.x * videoArea.displayedVideoWidth}px`,
+                        top: `${videoArea.videoOffsetY + cropArea.y * videoArea.displayedVideoHeight}px`,
+                        width: `${cropArea.width * videoArea.displayedVideoWidth}px`,
+                        height: `${cropArea.height * videoArea.displayedVideoHeight}px`,
+                      }}
+                      onMouseDown={(e) => handleCropMouseDown(e)}
+                    >
+                      {/* Resize handles */}
+                      <div
+                        className="absolute -top-1 -left-1 w-3 h-3 bg-orange-400 border border-white cursor-nw-resize pointer-events-auto"
+                        onMouseDown={(e) => handleCropMouseDown(e, "nw")}
+                      />
+                      <div
+                        className="absolute -top-1 -right-1 w-3 h-3 bg-orange-400 border border-white cursor-ne-resize pointer-events-auto"
+                        onMouseDown={(e) => handleCropMouseDown(e, "ne")}
+                      />
+                      <div
+                        className="absolute -bottom-1 -left-1 w-3 h-3 bg-orange-400 border border-white cursor-sw-resize pointer-events-auto"
+                        onMouseDown={(e) => handleCropMouseDown(e, "sw")}
+                      />
+                      <div
+                        className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-400 border border-white cursor-se-resize pointer-events-auto"
+                        onMouseDown={(e) => handleCropMouseDown(e, "se")}
+                      />
 
-                    {/* Center indicator */}
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-xs bg-orange-500 px-2 py-1 rounded pointer-events-none">
-                      Crop Area
+                      {/* Center indicator */}
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-xs bg-orange-500 px-2 py-1 rounded pointer-events-none">
+                        Crop Area
+                      </div>
+                    </div>
+
+                    {/* Dimmed overlay for non-crop areas */}
+                    <div className="absolute inset-0 bg-black/40 pointer-events-none">
+                      <div
+                        className="absolute bg-transparent"
+                        style={{
+                          left: `${videoArea.videoOffsetX + cropArea.x * videoArea.displayedVideoWidth}px`,
+                          top: `${videoArea.videoOffsetY + cropArea.y * videoArea.displayedVideoHeight}px`,
+                          width: `${cropArea.width * videoArea.displayedVideoWidth}px`,
+                          height: `${cropArea.height * videoArea.displayedVideoHeight}px`,
+                          boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.4)`,
+                        }}
+                      />
                     </div>
                   </div>
-
-                  {/* Dimmed overlay for non-crop areas */}
-                  <div className="absolute inset-0 bg-black/40 pointer-events-none">
-                    <div
-                      className="absolute bg-transparent"
-                      style={{
-                        left: `${cropArea.x * 100}%`,
-                        top: `${cropArea.y * 100}%`,
-                        width: `${cropArea.width * 100}%`,
-                        height: `${cropArea.height * 100}%`,
-                        boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.4)`,
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
+                )
+                return cropOverlay
+              })()}
 
               {/* Real-time Effect Preview Canvas */}
               <canvas
@@ -2883,61 +3161,65 @@ export default function CameraRecorder() {
               />
 
               {/* Effect Crop Overlay */}
-              {isEffectCropMode && recordingState === "idle" && videoEffect !== ("none" as VideoEffect) && (
-                <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
-                  {/* Effect crop area overlay */}
-                  <div
-                    className="absolute border-2 border-purple-400 bg-purple-400/10 cursor-move pointer-events-auto"
-                    style={{
-                      left: `${effectCropArea.x * 100}%`,
-                      top: `${effectCropArea.y * 100}%`,
-                      width: `${effectCropArea.width * 100}%`,
-                      height: `${effectCropArea.height * 100}%`,
-                    }}
-                    onMouseDown={(e) => handleEffectCropMouseDown(e)}
-                  >
-                    {/* Resize handles */}
+              {isMounted && isEffectCropMode && recordingState === "idle" && videoEffect !== ("none" as VideoEffect) && (() => {
+                const videoArea = getVideoDisplayArea()
+                const effectOverlay = (
+                  <div key="effect-crop-overlay" className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
+                    {/* Effect crop area overlay - positioned relative to actual video display area */}
                     <div
-                      className="absolute -top-1 -left-1 w-3 h-3 bg-purple-400 border border-white cursor-nw-resize pointer-events-auto"
-                      onMouseDown={(e) => handleEffectCropMouseDown(e, "nw")}
-                    />
-                    <div
-                      className="absolute -top-1 -right-1 w-3 h-3 bg-purple-400 border border-white cursor-ne-resize pointer-events-auto"
-                      onMouseDown={(e) => handleEffectCropMouseDown(e, "ne")}
-                    />
-                    <div
-                      className="absolute -bottom-1 -left-1 w-3 h-3 bg-purple-400 border border-white cursor-sw-resize pointer-events-auto"
-                      onMouseDown={(e) => handleEffectCropMouseDown(e, "sw")}
-                    />
-                    <div
-                      className="absolute -bottom-1 -right-1 w-3 h-3 bg-purple-400 border border-white cursor-se-resize pointer-events-auto"
-                      onMouseDown={(e) => handleEffectCropMouseDown(e, "se")}
-                    />
+                      className="absolute border-2 border-purple-400 bg-purple-400/10 cursor-move pointer-events-auto"
+                      style={{
+                        left: `${videoArea.videoOffsetX + effectCropArea.x * videoArea.displayedVideoWidth}px`,
+                        top: `${videoArea.videoOffsetY + effectCropArea.y * videoArea.displayedVideoHeight}px`,
+                        width: `${effectCropArea.width * videoArea.displayedVideoWidth}px`,
+                        height: `${effectCropArea.height * videoArea.displayedVideoHeight}px`,
+                      }}
+                      onMouseDown={(e) => handleEffectCropMouseDown(e)}
+                    >
+                      {/* Resize handles */}
+                      <div
+                        className="absolute -top-1 -left-1 w-3 h-3 bg-purple-400 border border-white cursor-nw-resize pointer-events-auto"
+                        onMouseDown={(e) => handleEffectCropMouseDown(e, "nw")}
+                      />
+                      <div
+                        className="absolute -top-1 -right-1 w-3 h-3 bg-purple-400 border border-white cursor-ne-resize pointer-events-auto"
+                        onMouseDown={(e) => handleEffectCropMouseDown(e, "ne")}
+                      />
+                      <div
+                        className="absolute -bottom-1 -left-1 w-3 h-3 bg-purple-400 border border-white cursor-sw-resize pointer-events-auto"
+                        onMouseDown={(e) => handleEffectCropMouseDown(e, "sw")}
+                      />
+                      <div
+                        className="absolute -bottom-1 -right-1 w-3 h-3 bg-purple-400 border border-white cursor-se-resize pointer-events-auto"
+                        onMouseDown={(e) => handleEffectCropMouseDown(e, "se")}
+                      />
 
-                    {/* Center indicator */}
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-xs bg-purple-500 px-2 py-1 rounded pointer-events-none">
-                      {videoEffect === "blur" ? "Blur" : "Pixelate"} Area
+                      {/* Center indicator */}
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-xs bg-purple-500 px-2 py-1 rounded pointer-events-none">
+                        {videoEffect === "blur" ? "Blur" : "Pixelate"} Area
+                      </div>
+                    </div>
+
+                    {/* Dimmed overlay for non-effect areas */}
+                    <div className="absolute inset-0 bg-black/20 pointer-events-none">
+                      <div
+                        className="absolute bg-transparent"
+                        style={{
+                          left: `${videoArea.videoOffsetX + effectCropArea.x * videoArea.displayedVideoWidth}px`,
+                          top: `${videoArea.videoOffsetY + effectCropArea.y * videoArea.displayedVideoHeight}px`,
+                          width: `${effectCropArea.width * videoArea.displayedVideoWidth}px`,
+                          height: `${effectCropArea.height * videoArea.displayedVideoHeight}px`,
+                          boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.2)`,
+                        }}
+                      />
                     </div>
                   </div>
-
-                  {/* Dimmed overlay for non-effect areas */}
-                  <div className="absolute inset-0 bg-black/20 pointer-events-none">
-                    <div
-                      className="absolute bg-transparent"
-                      style={{
-                        left: `${effectCropArea.x * 100}%`,
-                        top: `${effectCropArea.y * 100}%`,
-                        width: `${effectCropArea.width * 100}%`,
-                        height: `${effectCropArea.height * 100}%`,
-                        boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.2)`,
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
+                )
+                return effectOverlay
+              })()}
 
               {/* Zoom Controls Overlay */}
-              {recordingState === "idle" && !isFullscreen && (
+              {isMounted && recordingState === "idle" && !isFullscreen && (
                 <div className="absolute top-4 left-4 flex flex-col gap-2 bg-black/50 backdrop-blur-sm rounded-lg p-2">
                   <Button
                     onClick={zoomIn}
@@ -3721,11 +4003,12 @@ export default function CameraRecorder() {
               {/* Modal Content */}
               <div className="relative">
                 {/* Main Image */}
-                <div className="flex items-center justify-center bg-gray-50 min-h-[400px] max-h-[60vh] overflow-hidden">
+                <div className="flex items-center justify-center bg-gray-50 min-h-[400px] max-h-[70vh] overflow-hidden p-4">
                   <img
                     src={screenshots[selectedScreenshotIndex]?.url || "/placeholder.svg"}
                     alt={`Screenshot ${selectedScreenshotIndex + 1}`}
-                    className="max-w-full max-h-full object-contain"
+                    className="max-w-full max-h-full object-contain shadow-lg rounded"
+                    style={{ maxWidth: '90vw', maxHeight: '70vh' }}
                   />
                 </div>
 
