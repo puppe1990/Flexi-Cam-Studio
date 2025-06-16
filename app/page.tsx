@@ -144,7 +144,16 @@ export default function CameraRecorder() {
     const videoHeight = video.videoHeight || 720
     const videoAspectRatio = videoWidth / videoHeight
     
-    const containerRect = container.getBoundingClientRect()
+    // In fullscreen mode, we need to get the actual video element bounds instead of container
+    let containerRect: DOMRect
+    if (isFullscreen) {
+      // In fullscreen, use the video element's actual bounds
+      containerRect = video.getBoundingClientRect()
+    } else {
+      // In normal mode, use the container bounds
+      containerRect = container.getBoundingClientRect()
+    }
+    
     const containerAspectRatio = containerRect.width / containerRect.height
     
     let displayedVideoWidth: number
@@ -176,15 +185,18 @@ export default function CameraRecorder() {
       videoOffsetY = 0
     }
     
-    // Debug logging for vertical mode
-    if (aspectRatio === "9:16") {
-      console.log(`📐 Video Display Area (${aspectRatio}):`, {
+    // Debug logging with fullscreen info (only when crop modes are active)
+    if (isCropMode || isEffectCropMode) {
+      console.log(`📐 Video Display Area (${aspectRatio}, ${isFullscreen ? 'FULLSCREEN' : 'NORMAL'}):`, {
         video: { width: videoWidth, height: videoHeight, aspectRatio: videoAspectRatio },
         container: { width: containerRect.width, height: containerRect.height, aspectRatio: containerAspectRatio },
         displayed: { width: displayedVideoWidth, height: displayedVideoHeight },
         offset: { x: videoOffsetX, y: videoOffsetY },
         aspectRatioDiff,
-        tolerance: 0.01
+        tolerance: 0.01,
+        mode: isFullscreen ? 'fullscreen' : 'normal',
+        cropMode: isCropMode,
+        effectCropMode: isEffectCropMode
       })
     }
     
@@ -196,7 +208,7 @@ export default function CameraRecorder() {
       containerWidth: containerRect.width,
       containerHeight: containerRect.height
     }
-  }, [])
+  }, [aspectRatio, isFullscreen, isCropMode, isEffectCropMode])
 
   // Utility function to download blob with better file handling
   const downloadBlob = useCallback(
@@ -1361,12 +1373,15 @@ export default function CameraRecorder() {
 
   // Handle crop area mouse events
   const handleCropMouseDown = useCallback((e: React.MouseEvent, handle?: string) => {
-    if (!videoContainerRef.current) return
+    if (!videoContainerRef.current || !videoRef.current) return
 
     e.preventDefault()
     e.stopPropagation()
 
-    const rect = videoContainerRef.current.getBoundingClientRect()
+    // Use the correct element bounds based on fullscreen mode
+    const rect = isFullscreen 
+      ? videoRef.current.getBoundingClientRect()
+      : videoContainerRef.current.getBoundingClientRect()
     const videoArea = getVideoDisplayArea()
     
     // Convert mouse coordinates relative to the actual video display area
@@ -1381,16 +1396,19 @@ export default function CameraRecorder() {
     } else {
       setIsDragging(true)
     }
-  }, [getVideoDisplayArea])
+  }, [getVideoDisplayArea, isFullscreen])
 
   // Handle effect crop area mouse events
   const handleEffectCropMouseDown = useCallback((e: React.MouseEvent, handle?: string) => {
-    if (!videoContainerRef.current) return
+    if (!videoContainerRef.current || !videoRef.current) return
 
     e.preventDefault()
     e.stopPropagation()
 
-    const rect = videoContainerRef.current.getBoundingClientRect()
+    // Use the correct element bounds based on fullscreen mode
+    const rect = isFullscreen 
+      ? videoRef.current.getBoundingClientRect()
+      : videoContainerRef.current.getBoundingClientRect()
     const videoArea = getVideoDisplayArea()
     
     // Convert mouse coordinates relative to the actual video display area
@@ -1405,13 +1423,16 @@ export default function CameraRecorder() {
     } else {
       setIsEffectDragging(true)
     }
-  }, [getVideoDisplayArea])
+  }, [getVideoDisplayArea, isFullscreen])
 
   const handleCropMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!videoContainerRef.current || (!isDragging && !isResizing && !isEffectDragging && !isEffectResizing)) return
+      if (!videoContainerRef.current || !videoRef.current || (!isDragging && !isResizing && !isEffectDragging && !isEffectResizing)) return
 
-      const rect = videoContainerRef.current.getBoundingClientRect()
+      // Use the correct element bounds based on fullscreen mode
+      const rect = isFullscreen 
+        ? videoRef.current.getBoundingClientRect()
+        : videoContainerRef.current.getBoundingClientRect()
       const videoArea = getVideoDisplayArea()
 
       // Handle regular crop area
@@ -1514,6 +1535,7 @@ export default function CameraRecorder() {
       resizeHandle,
       effectResizeHandle,
       getVideoDisplayArea,
+      isFullscreen,
     ],
   )
 
@@ -2269,10 +2291,33 @@ export default function CameraRecorder() {
     }
   }, [])
 
+  // Recalculate crop areas when switching between fullscreen and normal modes
+  const recalculateCropAreas = useCallback(() => {
+    // Force a recalculation of video display area after fullscreen change
+    // This ensures crop overlays are positioned correctly
+    if (isCropMode || isEffectCropMode) {
+      // Trigger a re-render by updating the video container size state
+      setTimeout(() => {
+        if (videoContainerRef.current) {
+          const rect = videoContainerRef.current.getBoundingClientRect()
+          setVideoContainerSize({ width: rect.width, height: rect.height })
+        }
+      }, 100) // Small delay to ensure fullscreen transition is complete
+    }
+  }, [isCropMode, isEffectCropMode])
+
   // Handle fullscreen change events
   const handleFullscreenChange = useCallback(() => {
-    setIsFullscreen(!!document.fullscreenElement)
-  }, [])
+    const wasFullscreen = isFullscreen
+    const nowFullscreen = !!document.fullscreenElement
+    
+    setIsFullscreen(nowFullscreen)
+    
+    // If fullscreen state changed and crop modes are active, recalculate positions
+    if (wasFullscreen !== nowFullscreen) {
+      recalculateCropAreas()
+    }
+  }, [isFullscreen, recalculateCropAreas])
 
   // Format time display
   const formatTime = (seconds: number) => {
@@ -2456,6 +2501,22 @@ export default function CameraRecorder() {
       document.removeEventListener("fullscreenchange", handleFullscreenChange)
     }
   }, [handleFullscreenChange])
+
+  // Recalculate crop areas when fullscreen state changes
+  useEffect(() => {
+    if (isCropMode || isEffectCropMode) {
+      // Add a small delay to ensure the layout has updated after fullscreen change
+      const timeoutId = setTimeout(() => {
+        // Force a re-render of crop overlays by updating container size
+        if (videoContainerRef.current) {
+          const rect = videoContainerRef.current.getBoundingClientRect()
+          setVideoContainerSize({ width: rect.width, height: rect.height })
+        }
+      }, 150) // Delay to ensure fullscreen transition is complete
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [isFullscreen, isCropMode, isEffectCropMode])
 
   // Generate thumbnails when video is ready
   useEffect(() => {
