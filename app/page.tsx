@@ -983,6 +983,48 @@ export default function CameraRecorder() {
     return output
   }, [])
 
+  // Shared function to calculate effect area coordinates in video space
+  const calculateEffectAreaInVideoSpace = useCallback((canvasWidth: number, canvasHeight: number) => {
+    if (!videoRef.current || !videoContainerRef.current) {
+      return { x: 0, y: 0, width: canvasWidth, height: canvasHeight }
+    }
+
+    const video = videoRef.current
+    const videoWidth = video.videoWidth || 1280
+    const videoHeight = video.videoHeight || 720
+
+    // Use the same logic as getVideoDisplayArea to ensure consistency
+    const videoArea = getVideoDisplayArea()
+    
+    // Convert effect crop area from container percentage to video coordinates
+    const effectStartX = effectCropArea.x * videoArea.containerWidth
+    const effectStartY = effectCropArea.y * videoArea.containerHeight
+    const effectWidth = effectCropArea.width * videoArea.containerWidth
+    const effectHeight = effectCropArea.height * videoArea.containerHeight
+
+    // Convert to video coordinate space
+    const videoEffectStartX = (effectStartX - videoArea.videoOffsetX) * (videoWidth / videoArea.displayedVideoWidth)
+    const videoEffectStartY = (effectStartY - videoArea.videoOffsetY) * (videoHeight / videoArea.displayedVideoHeight)
+    const videoEffectWidth = effectWidth * (videoWidth / videoArea.displayedVideoWidth)
+    const videoEffectHeight = effectHeight * (videoHeight / videoArea.displayedVideoHeight)
+
+    // For screenshots, we need to scale to canvas dimensions if different from video dimensions
+    const scaleX = canvasWidth / videoWidth
+    const scaleY = canvasHeight / videoHeight
+
+    const clampedX = Math.max(0, Math.min(videoEffectStartX * scaleX, canvasWidth))
+    const clampedY = Math.max(0, Math.min(videoEffectStartY * scaleY, canvasHeight))
+    const clampedWidth = Math.max(1, Math.min(videoEffectWidth * scaleX, canvasWidth - clampedX))
+    const clampedHeight = Math.max(1, Math.min(videoEffectHeight * scaleY, canvasHeight - clampedY))
+
+    return {
+      x: clampedX,
+      y: clampedY,
+      width: clampedWidth,
+      height: clampedHeight
+    }
+  }, [effectCropArea, getVideoDisplayArea])
+
   // Create real-time effect preview overlay
   const updateEffectPreview = useCallback(() => {
     if (!previewEffectCanvasRef.current || !videoRef.current || !videoContainerRef.current) return
@@ -1010,30 +1052,10 @@ export default function CameraRecorder() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-    // Calculate video dimensions and positioning within container
-    const videoWidth = video.videoWidth || 1280
-    const videoHeight = video.videoHeight || 720
-    const videoAspectRatio = videoWidth / videoHeight
-    const containerAspectRatio = containerRect.width / containerRect.height
-
-    let displayedVideoWidth: number
-    let displayedVideoHeight: number
-    let videoOffsetX = 0
-    let videoOffsetY = 0
-
-    if (videoAspectRatio > containerAspectRatio) {
-      displayedVideoWidth = containerRect.width
-      displayedVideoHeight = containerRect.width / videoAspectRatio
-      videoOffsetX = 0
-      videoOffsetY = (containerRect.height - displayedVideoHeight) / 2
-    } else {
-      displayedVideoWidth = containerRect.height * videoAspectRatio
-      displayedVideoHeight = containerRect.height
-      videoOffsetX = (containerRect.width - displayedVideoWidth) / 2
-      videoOffsetY = 0
-    }
-
-    // Convert effect crop area to canvas coordinates
+    // Use consistent coordinate calculation for video display area
+    const videoArea = getVideoDisplayArea()
+    
+    // Convert effect crop area to canvas coordinates (preview canvas matches container size)
     const effectStartX = effectCropArea.x * containerRect.width
     const effectStartY = effectCropArea.y * containerRect.height
     const effectWidth = effectCropArea.width * containerRect.width
@@ -1047,11 +1069,14 @@ export default function CameraRecorder() {
     tempCanvas.width = effectWidth
     tempCanvas.height = effectHeight
 
-    // Calculate the source rectangle on the video
-    const videoEffectStartX = (effectStartX - videoOffsetX) * (videoWidth / displayedVideoWidth)
-    const videoEffectStartY = (effectStartY - videoOffsetY) * (videoHeight / displayedVideoHeight)
-    const videoEffectWidth = effectWidth * (videoWidth / displayedVideoWidth)
-    const videoEffectHeight = effectHeight * (videoHeight / displayedVideoHeight)
+    // Calculate the source rectangle on the video using consistent logic
+    const videoWidth = video.videoWidth || 1280
+    const videoHeight = video.videoHeight || 720
+    
+    const videoEffectStartX = (effectStartX - videoArea.videoOffsetX) * (videoWidth / videoArea.displayedVideoWidth)
+    const videoEffectStartY = (effectStartY - videoArea.videoOffsetY) * (videoHeight / videoArea.displayedVideoHeight)
+    const videoEffectWidth = effectWidth * (videoWidth / videoArea.displayedVideoWidth)
+    const videoEffectHeight = effectHeight * (videoHeight / videoArea.displayedVideoHeight)
 
     // Clamp to video bounds
     const clampedX = Math.max(0, Math.min(videoEffectStartX, videoWidth))
@@ -1190,70 +1215,16 @@ export default function CameraRecorder() {
       }
 
       // Apply effect to specific area if effect crop mode is enabled
-      if (isEffectCropMode && videoEffect !== ("none" as VideoEffect) && videoContainerRef.current) {
+      if (isEffectCropMode && videoEffect !== ("none" as VideoEffect)) {
         const videoWidth = video.videoWidth || 1280
         const videoHeight = video.videoHeight || 720
-        const videoAspectRatio = videoWidth / videoHeight
 
-        // Get the container dimensions
-        let containerRect: DOMRect
-        let containerAspectRatio: number
-
-        if (isFullscreen) {
-          const videoElement = video.getBoundingClientRect()
-          containerRect = videoElement
-          containerAspectRatio = videoElement.width / videoElement.height
-        } else {
-          containerRect = videoContainerRef.current.getBoundingClientRect()
-          containerAspectRatio = containerRect.width / containerRect.height
-        }
-
-        // Calculate how the video is displayed within the container (using same logic as getVideoDisplayArea)
-        let displayedVideoWidth: number
-        let displayedVideoHeight: number
-        let videoOffsetX = 0
-        let videoOffsetY = 0
-
-        // Use a small tolerance for aspect ratio comparison to handle floating point precision
-        const aspectRatioTolerance = 0.01
-        const aspectRatioDiff = Math.abs(videoAspectRatio - containerAspectRatio)
-        
-        if (aspectRatioDiff < aspectRatioTolerance) {
-          // Aspect ratios are essentially the same - video fills container
-          displayedVideoWidth = containerRect.width
-          displayedVideoHeight = containerRect.height
-          videoOffsetX = 0
-          videoOffsetY = 0
-        } else if (videoAspectRatio > containerAspectRatio) {
-          // Video is wider than container - constrain by width (letterboxed)
-          displayedVideoWidth = containerRect.width
-          displayedVideoHeight = containerRect.width / videoAspectRatio
-          videoOffsetX = 0
-          videoOffsetY = (containerRect.height - displayedVideoHeight) / 2
-        } else {
-          // Video is taller than container - constrain by height (pillarboxed)
-          displayedVideoWidth = containerRect.height * videoAspectRatio
-          displayedVideoHeight = containerRect.height
-          videoOffsetX = (containerRect.width - displayedVideoWidth) / 2
-          videoOffsetY = 0
-        }
-
-        // Convert effect crop area to video coordinates
-        const effectStartX = effectCropArea.x * containerRect.width
-        const effectStartY = effectCropArea.y * containerRect.height
-        const effectWidth = effectCropArea.width * containerRect.width
-        const effectHeight = effectCropArea.height * containerRect.height
-
-        const videoEffectStartX = (effectStartX - videoOffsetX) * (videoWidth / displayedVideoWidth)
-        const videoEffectStartY = (effectStartY - videoOffsetY) * (videoHeight / displayedVideoHeight)
-        const videoEffectWidth = effectWidth * (videoWidth / displayedVideoWidth)
-        const videoEffectHeight = effectHeight * (videoHeight / displayedVideoHeight)
-
-        // Clamp to video bounds
-        const clampedX = Math.max(0, Math.min(videoEffectStartX, videoWidth))
-        const clampedY = Math.max(0, Math.min(videoEffectStartY, videoHeight))
-        const clampedWidth = Math.max(1, Math.min(videoEffectWidth, videoWidth - clampedX))
-        const clampedHeight = Math.max(1, Math.min(videoEffectHeight, videoHeight - clampedY))
+        // Use consistent coordinate calculation
+        const effectArea = calculateEffectAreaInVideoSpace(canvas.width, canvas.height)
+        const clampedX = effectArea.x
+        const clampedY = effectArea.y
+        const clampedWidth = effectArea.width
+        const clampedHeight = effectArea.height
 
         // Create a temporary canvas for the effect area
         const tempCanvas = document.createElement("canvas")
@@ -1351,7 +1322,7 @@ export default function CameraRecorder() {
     }
 
     return canvasStream
-  }, [videoEffect, effectIntensity, isMirrored, isEffectCropMode, effectCropArea, isFullscreen])
+  }, [videoEffect, effectIntensity, isMirrored, isEffectCropMode, effectCropArea, isFullscreen, calculateEffectAreaInVideoSpace])
 
   // Toggle crop mode
   const toggleCropMode = useCallback(() => {
@@ -1599,60 +1570,51 @@ export default function CameraRecorder() {
 
   // Apply effects to screenshot canvas
   const applyEffectToScreenshot = useCallback((ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, mode: "crop" | "full") => {
-    if (!videoContainerRef.current) return
+    if (!isEffectCropMode && mode === "full") {
+      // Apply effect to entire screenshot when not in effect crop mode
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      
+      if (videoEffect === "blur") {
+        const blurAmount = effectIntensity * 2
+        try {
+          ctx.filter = `blur(${blurAmount}px)`
+          ctx.drawImage(canvas, 0, 0)
+        } catch (error) {
+          // Fallback to manual blur
+          const blurredData = applyManualBlur(imageData, Math.ceil(blurAmount / 2))
+          ctx.putImageData(blurredData, 0, 0)
+        }
+      } else if (videoEffect === "pixelate") {
+        const pixelSize = Math.max(2, effectIntensity * 4)
+        const scaledWidth = Math.max(1, Math.floor(canvas.width / pixelSize))
+        const scaledHeight = Math.max(1, Math.floor(canvas.height / pixelSize))
 
-    let effectAreaInCanvas = { x: 0, y: 0, width: canvas.width, height: canvas.height }
-
-    if (mode === "full") {
-      // For full screenshot, calculate effect area position
-      const video = videoRef.current
-      if (!video) return
-
-      const videoWidth = video.videoWidth || 1280
-      const videoHeight = video.videoHeight || 720
-      const videoAspectRatio = videoWidth / videoHeight
-
-      const containerRect = videoContainerRef.current.getBoundingClientRect()
-      const containerAspectRatio = containerRect.width / containerRect.height
-
-      let displayedVideoWidth: number
-      let displayedVideoHeight: number
-      let videoOffsetX = 0
-      let videoOffsetY = 0
-
-      if (videoAspectRatio > containerAspectRatio) {
-        displayedVideoWidth = containerRect.width
-        displayedVideoHeight = containerRect.width / videoAspectRatio
-        videoOffsetX = 0
-        videoOffsetY = (containerRect.height - displayedVideoHeight) / 2
-      } else {
-        displayedVideoWidth = containerRect.height * videoAspectRatio
-        displayedVideoHeight = containerRect.height
-        videoOffsetX = (containerRect.width - displayedVideoWidth) / 2
-        videoOffsetY = 0
+        const pixelCanvas = document.createElement("canvas")
+        const pixelCtx = pixelCanvas.getContext("2d")
+        if (pixelCtx) {
+          pixelCanvas.width = scaledWidth
+          pixelCanvas.height = scaledHeight
+          pixelCtx.imageSmoothingEnabled = false
+          pixelCtx.putImageData(imageData, 0, 0)
+          
+          // Draw at reduced size
+          pixelCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, scaledWidth, scaledHeight)
+          
+          // Draw back at full size
+          ctx.imageSmoothingEnabled = false
+          ctx.clearRect(0, 0, canvas.width, canvas.height)
+          ctx.drawImage(pixelCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, canvas.width, canvas.height)
+        }
       }
-
-      const effectStartX = effectCropArea.x * containerRect.width
-      const effectStartY = effectCropArea.y * containerRect.height
-      const effectWidth = effectCropArea.width * containerRect.width
-      const effectHeight = effectCropArea.height * containerRect.height
-
-      const videoEffectStartX = (effectStartX - videoOffsetX) * (videoWidth / displayedVideoWidth)
-      const videoEffectStartY = (effectStartY - videoOffsetY) * (videoHeight / displayedVideoHeight)
-      const videoEffectWidth = effectWidth * (videoWidth / displayedVideoWidth)
-      const videoEffectHeight = effectHeight * (videoHeight / displayedVideoHeight)
-
-      effectAreaInCanvas = {
-        x: Math.max(0, Math.min(videoEffectStartX, videoWidth)),
-        y: Math.max(0, Math.min(videoEffectStartY, videoHeight)),
-        width: Math.max(1, Math.min(videoEffectWidth, videoWidth - Math.max(0, videoEffectStartX))),
-        height: Math.max(1, Math.min(videoEffectHeight, videoHeight - Math.max(0, videoEffectStartY)))
-      }
-    } else {
-      // For crop mode, apply effect to the whole cropped area for simplicity
-      // You could enhance this to calculate intersection if needed
-      effectAreaInCanvas = { x: 0, y: 0, width: canvas.width, height: canvas.height }
+      return
     }
+
+    if (!isEffectCropMode) return
+
+    // Calculate effect area using consistent coordinate system
+    const effectAreaInCanvas = mode === "crop" 
+      ? { x: 0, y: 0, width: canvas.width, height: canvas.height } // For crop mode, apply to whole cropped area
+      : calculateEffectAreaInVideoSpace(canvas.width, canvas.height) // For full mode, use calculated area
 
     // Extract the effect area
     const imageData = ctx.getImageData(effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
@@ -1660,15 +1622,19 @@ export default function CameraRecorder() {
     if (videoEffect === "blur") {
       const blurAmount = effectIntensity * 2
       try {
-        // Create blur canvas
-        const blurCanvas = document.createElement("canvas")
-        const blurCtx = blurCanvas.getContext("2d")
-        if (blurCtx) {
-          blurCanvas.width = effectAreaInCanvas.width
-          blurCanvas.height = effectAreaInCanvas.height
-          blurCtx.putImageData(imageData, 0, 0)
-          blurCtx.filter = `blur(${blurAmount}px)`
-          blurCtx.drawImage(blurCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
+        // Create temporary canvas for blur effect
+        const tempCanvas = document.createElement("canvas")
+        const tempCtx = tempCanvas.getContext("2d")
+        if (tempCtx) {
+          tempCanvas.width = effectAreaInCanvas.width
+          tempCanvas.height = effectAreaInCanvas.height
+          tempCtx.putImageData(imageData, 0, 0)
+          tempCtx.filter = `blur(${blurAmount}px)`
+          tempCtx.drawImage(tempCanvas, 0, 0)
+          
+          // Draw the blurred area back to the main canvas
+          ctx.drawImage(tempCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, 
+                       effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
         }
       } catch (error) {
         // Fallback to manual blur
@@ -1687,25 +1653,29 @@ export default function CameraRecorder() {
         pixelCanvas.height = scaledHeight
         pixelCtx.imageSmoothingEnabled = false
 
-        // Draw reduced size
-        pixelCtx.putImageData(imageData, 0, 0)
+        // Create temp canvas with original effect area
         const tempCanvas = document.createElement("canvas")
         const tempCtx = tempCanvas.getContext("2d")
         if (tempCtx) {
           tempCanvas.width = effectAreaInCanvas.width
           tempCanvas.height = effectAreaInCanvas.height
           tempCtx.putImageData(imageData, 0, 0)
+          
+          // Draw at reduced size for pixelation
           pixelCtx.drawImage(tempCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, 0, 0, scaledWidth, scaledHeight)
 
           // Draw back at full size
           tempCtx.imageSmoothingEnabled = false
           tempCtx.clearRect(0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height)
           tempCtx.drawImage(pixelCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height)
-          ctx.drawImage(tempCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
+          
+          // Draw the pixelated area back to the main canvas
+          ctx.drawImage(tempCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, 
+                       effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
         }
       }
     }
-  }, [videoRef, videoContainerRef, effectCropArea, videoEffect, effectIntensity, applyManualBlur])
+  }, [videoEffect, effectIntensity, isEffectCropMode, calculateEffectAreaInVideoSpace, applyManualBlur])
 
   // Take screenshot (with crop if enabled and timer support)
   const takeScreenshot = useCallback(
