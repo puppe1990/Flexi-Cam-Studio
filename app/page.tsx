@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Slider } from "@/components/ui/slider"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Camera,
   Square,
@@ -25,9 +26,12 @@ import {
   ZoomIn,
   ZoomOut,
   ZoomInIcon as ResetZoom,
+  Film,
+  Edit3,
 } from "lucide-react"
 
 import JSZip from "jszip"
+import VideoEffectsEditor from "@/components/VideoEffectsEditor"
 
 // Types (can be imported from types/camera.ts)
 type RecordingState = "idle" | "recording" | "stopped" | "editing" | "processing"
@@ -110,6 +114,11 @@ export default function CameraRecorder() {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false)
   const [selectedScreenshotIndex, setSelectedScreenshotIndex] = useState(0)
 
+  // Tab management
+  const [activeTab, setActiveTab] = useState("camera")
+
+
+
   const videoContainerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -123,6 +132,8 @@ export default function CameraRecorder() {
   const chunksRef = useRef<Blob[]>([])
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const previewEffectAnimationRef = useRef<number | null>(null)
+
+
 
   // Helper function to calculate actual video display area within container
   const getVideoDisplayArea = useCallback(() => {
@@ -1187,6 +1198,8 @@ export default function CameraRecorder() {
     }
   }, [isEffectCropMode, videoEffect, effectIntensity, recordingState, updateEffectPreview])
 
+
+
   // Create effect stream with blur or pixelation (with optional crop area)
   const createEffectStream = useCallback(() => {
     if (!effectCanvasRef.current || !videoRef.current || !streamRef.current) return null
@@ -1341,6 +1354,14 @@ export default function CameraRecorder() {
       setEffectCropArea({ x: 0.2, y: 0.2, width: 0.6, height: 0.6 })
     }
   }, [isEffectCropMode])
+
+
+
+
+
+  
+
+
 
   // Handle crop area mouse events
   const handleCropMouseDown = useCallback((e: React.MouseEvent, handle?: string) => {
@@ -2676,7 +2697,20 @@ export default function CameraRecorder() {
           </div>
         </div>
 
-        {/* Screenshot Gallery */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="camera" className="flex items-center gap-2">
+              <Camera className="w-4 h-4" />
+              Camera Recorder
+            </TabsTrigger>
+            <TabsTrigger value="editor" className="flex items-center gap-2">
+              <Edit3 className="w-4 h-4" />
+              Video Effects Editor
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="camera" className="space-y-6">
+            {/* Screenshot Gallery */}
         {screenshots.length > 0 && (
           <Card>
             <CardHeader className="pb-3">
@@ -3003,6 +3037,10 @@ export default function CameraRecorder() {
             </CardContent>
           </Card>
         )}
+
+
+
+
 
         {/* Main Video Card */}
         <Card className="overflow-hidden">
@@ -4190,6 +4228,18 @@ export default function CameraRecorder() {
                 <span className="font-semibold text-blue-600">14.</span>
                 <span>Download your video in your chosen format</span>
               </div>
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-blue-600">15.</span>
+                <span>Use the "Video Effects Editor" to upload existing videos and apply effects with live preview</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-blue-600">16.</span>
+                <span>In the effects editor, configure blur/pixelate intensity and choose area or full video application</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-blue-600">17.</span>
+                <span>Process and download your effect-enhanced video</span>
+              </div>
             </div>
 
             {/* Keyboard Shortcuts */}
@@ -4260,6 +4310,23 @@ export default function CameraRecorder() {
             </div>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="editor" className="space-y-6">
+            <VideoEffectsEditor
+              videoEffect={videoEffect}
+              setVideoEffect={setVideoEffect}
+              effectIntensity={effectIntensity}
+              setEffectIntensity={setEffectIntensity}
+              isEffectCropMode={isEffectCropMode}
+              setIsEffectCropMode={setIsEffectCropMode}
+              effectCropArea={effectCropArea}
+              handleEffectCropMouseDown={handleEffectCropMouseDown}
+              applyManualBlur={applyManualBlur}
+              downloadBlob={downloadBlob}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )
