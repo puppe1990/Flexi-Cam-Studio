@@ -94,7 +94,7 @@ export default function CameraRecorder() {
   const [isMirrored, setIsMirrored] = useState(false)
 
   // Effect functionality
-  type VideoEffect = "none" | "blur" | "pixelate"
+  type VideoEffect = "none" | "blur" | "pixelate" | "background"
   const [videoEffect, setVideoEffect] = useState<VideoEffect>("none")
   const [effectIntensity, setEffectIntensity] = useState(5) // 1-10 scale
 
@@ -110,6 +110,14 @@ export default function CameraRecorder() {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false)
   const [selectedScreenshotIndex, setSelectedScreenshotIndex] = useState(0)
 
+  // Background replacement functionality
+  const [backgroundType, setBackgroundType] = useState<"image" | "color" | "blur">("blur")
+  const [backgroundColor, setBackgroundColor] = useState("#00ff00")
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null)
+  const [backgroundImageFile, setBackgroundImageFile] = useState<File | null>(null)
+  const [isModelLoading, setIsModelLoading] = useState(false)
+  const [bodyPixModel, setBodyPixModel] = useState<any>(null)
+
   const videoContainerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -123,6 +131,8 @@ export default function CameraRecorder() {
   const chunksRef = useRef<Blob[]>([])
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const previewEffectAnimationRef = useRef<number | null>(null)
+  const backgroundCanvasRef = useRef<HTMLCanvasElement>(null)
+  const segmentationCanvasRef = useRef<HTMLCanvasElement>(null)
 
   // Helper function to calculate actual video display area within container
   const getVideoDisplayArea = useCallback(() => {
@@ -983,6 +993,221 @@ export default function CameraRecorder() {
     return output
   }, [])
 
+  // Load BodyPix model for background segmentation
+  const loadBodyPixModel = useCallback(async () => {
+    if (bodyPixModel || isModelLoading) return bodyPixModel
+
+    setIsModelLoading(true)
+    try {
+      // Dynamic import to avoid SSR issues
+      const [tf, bodyPix] = await Promise.all([
+        import('@tensorflow/tfjs'),
+        import('@tensorflow-models/body-pix')
+      ])
+      
+      // Initialize TensorFlow.js backend
+      await tf.ready()
+      
+      // Load the model
+      const model = await bodyPix.load({
+        architecture: 'MobileNetV1',
+        outputStride: 16,
+        multiplier: 0.75,
+        quantBytes: 2
+      })
+      
+      setBodyPixModel(model)
+      setIsModelLoading(false)
+      console.log('✅ BodyPix model loaded successfully!')
+      return model
+    } catch (error) {
+      console.error('Failed to load BodyPix model:', error)
+      setIsModelLoading(false)
+      return null
+    }
+  }, [bodyPixModel, isModelLoading])
+
+  // Handle background image upload
+  const handleBackgroundImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file && file.type.startsWith('image/')) {
+      setBackgroundImageFile(file)
+      const url = URL.createObjectURL(file)
+      setBackgroundImage(url)
+    }
+  }, [])
+
+  // Apply background replacement
+  const applyBackgroundReplacement = useCallback(async (
+    ctx: CanvasRenderingContext2D,
+    video: HTMLVideoElement,
+    canvas: HTMLCanvasElement
+  ) => {
+    if (!bodyPixModel) {
+      console.log('BodyPix model not loaded')
+      return false
+    }
+
+    try {
+      // Create a temporary canvas for segmentation input
+      const tempCanvas = document.createElement('canvas')
+      const tempCtx = tempCanvas.getContext('2d')
+      if (!tempCtx) return false
+
+      // Resize for faster processing while maintaining aspect ratio
+      const maxSize = 256
+      const videoAspect = video.videoWidth / video.videoHeight
+      let segWidth = maxSize
+      let segHeight = maxSize
+      
+      if (videoAspect > 1) {
+        segHeight = Math.round(maxSize / videoAspect)
+      } else {
+        segWidth = Math.round(maxSize * videoAspect)
+      }
+
+      tempCanvas.width = segWidth
+      tempCanvas.height = segHeight
+
+      // Draw video frame for segmentation
+      if (isMirrored) {
+        tempCtx.save()
+        tempCtx.scale(-1, 1)
+        tempCtx.drawImage(video, -segWidth, 0, segWidth, segHeight)
+        tempCtx.restore()
+      } else {
+        tempCtx.drawImage(video, 0, 0, segWidth, segHeight)
+      }
+
+      // Perform segmentation
+      console.log('🔍 Running segmentation...')
+      const segmentation = await bodyPixModel.segmentPerson(tempCanvas, {
+        flipHorizontal: false,
+        internalResolution: 'medium',
+        segmentationThreshold: 0.7
+      })
+      console.log('✅ Segmentation completed:', segmentation)
+
+      // Create background based on type
+      let backgroundCanvas = document.createElement('canvas')
+      let backgroundCtx = backgroundCanvas.getContext('2d')
+      if (!backgroundCtx) return false
+
+      backgroundCanvas.width = canvas.width
+      backgroundCanvas.height = canvas.height
+
+      if (backgroundType === 'color') {
+        // Solid color background
+        backgroundCtx.fillStyle = backgroundColor
+        backgroundCtx.fillRect(0, 0, canvas.width, canvas.height)
+      } else if (backgroundType === 'image' && backgroundImage) {
+        // Image background
+        const bgImage = new Image()
+        await new Promise((resolve, reject) => {
+          bgImage.onload = resolve
+          bgImage.onerror = reject
+          bgImage.src = backgroundImage
+        })
+        
+        // Scale image to fill canvas while maintaining aspect ratio
+        const bgAspect = bgImage.width / bgImage.height
+        const canvasAspect = canvas.width / canvas.height
+        
+        let drawWidth = canvas.width
+        let drawHeight = canvas.height
+        let offsetX = 0
+        let offsetY = 0
+        
+        if (bgAspect > canvasAspect) {
+          drawWidth = canvas.height * bgAspect
+          offsetX = (canvas.width - drawWidth) / 2
+        } else {
+          drawHeight = canvas.width / bgAspect
+          offsetY = (canvas.height - drawHeight) / 2
+        }
+        
+        backgroundCtx.drawImage(bgImage, offsetX, offsetY, drawWidth, drawHeight)
+      } else if (backgroundType === 'blur') {
+        // Blurred version of original video
+        if (isMirrored) {
+          backgroundCtx.save()
+          backgroundCtx.scale(-1, 1)
+          backgroundCtx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height)
+          backgroundCtx.restore()
+        } else {
+          backgroundCtx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        }
+        
+        // Apply blur
+        backgroundCtx.filter = `blur(${effectIntensity * 2}px)`
+        backgroundCtx.drawImage(backgroundCanvas, 0, 0)
+      }
+
+      // Clear main canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+      // Draw background
+      ctx.drawImage(backgroundCanvas, 0, 0)
+
+      // Create person mask at full resolution
+      const maskCanvas = document.createElement('canvas')
+      const maskCtx = maskCanvas.getContext('2d')
+      if (!maskCtx) return false
+
+      maskCanvas.width = canvas.width
+      maskCanvas.height = canvas.height
+
+      // Scale up the segmentation mask
+      const imageData = maskCtx.createImageData(canvas.width, canvas.height)
+      const data = imageData.data
+
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const segX = Math.floor((x / canvas.width) * segWidth)
+          const segY = Math.floor((y / canvas.height) * segHeight)
+          const segIndex = segY * segWidth + segX
+          
+          const isPerson = segmentation.data[segIndex] === 1
+          const pixelIndex = (y * canvas.width + x) * 4
+          
+          data[pixelIndex] = 255     // R
+          data[pixelIndex + 1] = 255 // G
+          data[pixelIndex + 2] = 255 // B
+          data[pixelIndex + 3] = isPerson ? 255 : 0 // A
+        }
+      }
+
+      maskCtx.putImageData(imageData, 0, 0)
+
+      // Draw original video with person mask
+      ctx.globalCompositeOperation = 'source-over'
+      if (isMirrored) {
+        ctx.save()
+        ctx.scale(-1, 1)
+        ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height)
+        ctx.restore()
+      } else {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      }
+
+      // Apply mask to keep only the person
+      ctx.globalCompositeOperation = 'destination-in'
+      ctx.drawImage(maskCanvas, 0, 0)
+
+      // Draw background where person is not
+      ctx.globalCompositeOperation = 'destination-over'
+      ctx.drawImage(backgroundCanvas, 0, 0)
+
+      // Reset composite operation
+      ctx.globalCompositeOperation = 'source-over'
+
+      return true
+    } catch (error) {
+      console.error('Background replacement failed:', error)
+      return false
+    }
+  }, [bodyPixModel, backgroundType, backgroundColor, backgroundImage, isMirrored, effectIntensity])
+
   // Shared function to calculate effect area coordinates in video space
   const calculateEffectAreaInVideoSpace = useCallback((canvasWidth: number, canvasHeight: number) => {
     if (!videoRef.current || !videoContainerRef.current) {
@@ -1151,6 +1376,10 @@ export default function CameraRecorder() {
       // Clear the temp canvas and draw the pixelated version back at full size
       tempCtx.clearRect(0, 0, effectWidth, effectHeight)
       tempCtx.drawImage(pixelCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, effectWidth, effectHeight)
+    } else if (videoEffect === "background") {
+      // Background replacement is handled differently - at the full video level
+      // This section shouldn't be reached for background effect
+      return
     }
 
     // Draw the processed area to the main canvas
@@ -1203,6 +1432,37 @@ export default function CameraRecorder() {
     const drawFrame = () => {
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+      // Handle background replacement first (if enabled)
+      if (videoEffect === "background" && bodyPixModel) {
+        // Use a separate async function for background replacement
+        applyBackgroundReplacement(ctx, video, canvas).then((success) => {
+          if (!success) {
+            // If background replacement fails, draw normal video
+            if (isMirrored) {
+              ctx.save()
+              ctx.scale(-1, 1)
+              ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height)
+              ctx.restore()
+            } else {
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+            }
+          }
+          requestAnimationFrame(drawFrame)
+        }).catch(() => {
+          // On error, fall back to normal video
+          if (isMirrored) {
+            ctx.save()
+            ctx.scale(-1, 1)
+            ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height)
+            ctx.restore()
+          } else {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+          }
+          requestAnimationFrame(drawFrame)
+        })
+        return
+      }
 
       // Draw the original video first
       if (isMirrored) {
@@ -2669,8 +2929,10 @@ export default function CameraRecorder() {
             )}
             {videoEffect !== ("none" as VideoEffect) && (
               <Badge variant="outline" className="text-xs border-purple-300 text-purple-600">
-                {videoEffect === "blur" ? "Blur" : "Pixelate"} {effectIntensity}
-                {isEffectCropMode && " (Area)"}
+                {videoEffect === "blur" ? "Blur" : videoEffect === "pixelate" ? "Pixelate" : "Background"} 
+                {videoEffect !== "background" && ` ${effectIntensity}`}
+                {videoEffect === "background" && ` (${backgroundType})`}
+                {isEffectCropMode && videoEffect !== "background" && " (Area)"}
               </Badge>
             )}
           </div>
@@ -2933,19 +3195,121 @@ export default function CameraRecorder() {
                 <div className="flex items-center justify-center gap-6 flex-wrap">
                   <div className="flex items-center gap-2">
                     <label className="text-sm font-medium">Effect:</label>
-                    <Select value={videoEffect} onValueChange={(value: VideoEffect) => setVideoEffect(value)}>
-                      <SelectTrigger className="w-28">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        <SelectItem value="blur">Blur</SelectItem>
-                        <SelectItem value="pixelate">Pixelate</SelectItem>
-                      </SelectContent>
-                    </Select>
+                                      <Select value={videoEffect} onValueChange={(value: VideoEffect) => {
+                    setVideoEffect(value)
+                    // Auto-load model when background replacement is selected
+                    if (value === "background" && !bodyPixModel && !isModelLoading) {
+                      loadBodyPixModel()
+                    }
+                  }}>
+                    <SelectTrigger className="w-28">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="blur">Blur</SelectItem>
+                      <SelectItem value="pixelate">Pixelate</SelectItem>
+                      <SelectItem value="background">Background Replacement</SelectItem>
+                    </SelectContent>
+                  </Select>
                   </div>
 
-                  {videoEffect !== ("none" as VideoEffect) && (
+                  {videoEffect === "background" && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium">Background Type:</label>
+                        <Select value={backgroundType} onValueChange={(value: "image" | "color" | "blur") => setBackgroundType(value)}>
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="blur">Blur Background</SelectItem>
+                            <SelectItem value="color">Solid Color</SelectItem>
+                            <SelectItem value="image">Custom Image</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {backgroundType === "color" && (
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm font-medium">Color:</label>
+                          <input
+                            type="color"
+                            value={backgroundColor}
+                            onChange={(e) => setBackgroundColor(e.target.value)}
+                            className="w-12 h-8 border border-gray-300 rounded cursor-pointer"
+                          />
+                          <span className="text-sm text-slate-600">{backgroundColor}</span>
+                        </div>
+                      )}
+
+                      {backgroundType === "image" && (
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm font-medium">Image:</label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleBackgroundImageUpload}
+                            className="text-sm"
+                          />
+                          {backgroundImage && (
+                            <div className="flex items-center gap-2">
+                              <img src={backgroundImage} alt="Background preview" className="w-8 h-8 object-cover rounded border" />
+                              <Button
+                                onClick={() => {
+                                  setBackgroundImage(null)
+                                  setBackgroundImageFile(null)
+                                }}
+                                variant="outline"
+                                size="sm"
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {(backgroundType === "blur") && (
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm font-medium">Blur Intensity:</label>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-slate-500">1</span>
+                            <Slider
+                              value={[effectIntensity]}
+                              min={1}
+                              max={10}
+                              step={1}
+                              onValueChange={([value]) => setEffectIntensity(value)}
+                              className="w-20"
+                            />
+                            <span className="text-xs text-slate-500">10</span>
+                            <span className="text-sm font-mono w-6 text-center">{effectIntensity}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {isModelLoading && (
+                        <div className="flex items-center gap-2 text-sm text-blue-600">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          Loading AI model...
+                        </div>
+                      )}
+
+                      {!bodyPixModel && !isModelLoading && (
+                        <Button
+                          onClick={loadBodyPixModel}
+                          variant="outline"
+                          size="sm"
+                          className="bg-blue-50 hover:bg-blue-100"
+                        >
+                          Load AI Model
+                        </Button>
+                      )}
+                    </>
+                  )}
+
+                  {videoEffect !== ("none" as VideoEffect) && videoEffect !== "background" && (
                     <>
                       <div className="flex items-center gap-2">
                         <label className="text-sm font-medium">Intensity:</label>
@@ -2979,7 +3343,37 @@ export default function CameraRecorder() {
                   )}
                 </div>
 
-                {videoEffect !== ("none" as VideoEffect) && isEffectCropMode && (
+                {videoEffect === "background" && (
+                  <div className="text-center text-sm text-slate-600 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <span className="font-medium">Background Replacement Active</span>
+                    </div>
+                    <p>
+                      AI-powered person detection will replace the background with your selected 
+                      {backgroundType === "color" ? " color" : backgroundType === "image" ? " image" : " blurred background"}
+                    </p>
+                    {!bodyPixModel && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        ⚠️ AI model not loaded. Click "Load AI Model" to enable background replacement.
+                      </p>
+                    )}
+                    {bodyPixModel && (
+                      <p className="text-xs text-green-600 mt-1">
+                        ✅ AI model loaded and ready for background replacement
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {videoEffect !== ("none" as VideoEffect) && videoEffect !== "background" && isEffectCropMode && (
                   <div className="text-center text-sm text-slate-600 bg-purple-50 rounded-lg p-3">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4115,6 +4509,8 @@ export default function CameraRecorder() {
         <canvas ref={screenshotCanvasRef} className="hidden" />
         <canvas ref={cropCanvasRef} className="hidden" />
         <canvas ref={effectCanvasRef} className="hidden" />
+        <canvas ref={backgroundCanvasRef} className="hidden" />
+        <canvas ref={segmentationCanvasRef} className="hidden" />
         {/* Preview effect canvas is already in the video container */}
 
         {/* Instructions */}
@@ -4142,7 +4538,7 @@ export default function CameraRecorder() {
               <div className="flex items-start gap-2">
                 <span className="font-semibold text-blue-600">4.</span>
                 <span>
-                  Apply visual effects like blur or pixelation for privacy or artistic purposes - choose to apply to
+                  Apply visual effects like blur, pixelation, or AI-powered background replacement for privacy or artistic purposes - choose to apply to
                   entire video or just a selected area
                 </span>
               </div>
