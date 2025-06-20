@@ -2801,102 +2801,7 @@ export default function CameraRecorder() {
           </TabsList>
 
           <TabsContent value="camera" className="space-y-8 mt-8">
-            {/* Screenshot Gallery */}
-        {screenshots.length > 0 && (
-          <Card className="bg-white/70 backdrop-blur-sm border border-white/50 shadow-xl rounded-2xl overflow-hidden">
-            <CardHeader className="pb-4 bg-gradient-to-r from-blue-50/80 to-purple-50/80 border-b border-white/50">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl shadow-lg">
-                    <ImageIcon className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                    Recent Screenshots ({screenshotCount})
-                  </span>
-                </CardTitle>
-                <div className="flex items-center gap-3">
-                  {screenshots.length > 1 && (
-                    <Button
-                      onClick={downloadAllScreenshots}
-                      variant="outline"
-                      size="sm"
-                      className="bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 text-emerald-700 border-emerald-300 shadow-sm transition-all duration-300 hover:shadow-md"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download All ZIP
-                    </Button>
-                  )}
-                  <Button 
-                    onClick={clearScreenshots} 
-                    variant="outline" 
-                    size="sm"
-                    className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all duration-300"
-                  >
-                    Clear All
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="flex gap-4 overflow-x-auto pb-3">
-                {screenshots.map((screenshot, index) => (
-                  <div key={screenshot.id} className="flex-shrink-0 group">
-                    <div className="relative">
-                      <img
-                        src={screenshot.url || "/placeholder.svg"}
-                        alt="Screenshot"
-                        className="w-20 h-28 object-contain bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 border-transparent group-hover:border-blue-400 transition-all duration-300 cursor-pointer shadow-sm group-hover:shadow-lg"
-                        onClick={() => openScreenshotModal(index)}
-                      />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-xl flex items-center justify-center">
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openScreenshotModal(index)
-                            }}
-                            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
-                            title="View"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              downloadScreenshot(screenshot)
-                            }}
-                            className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
-                            title="Download"
-                          >
-                            <Download className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-2 text-center font-medium">
-                      {screenshot.timestamp.toLocaleTimeString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Export Format Selection */}
+            {/* Export Format Selection */}
         {recordingState === "stopped" || recordingState === "editing" ? (
           <Card className="bg-white/70 backdrop-blur-sm border border-white/50 shadow-xl rounded-2xl overflow-hidden">
             <CardContent className="pt-6">
@@ -4255,6 +4160,101 @@ export default function CameraRecorder() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Screenshot Gallery */}
+        {screenshots.length > 0 && (
+          <Card className="bg-white/70 backdrop-blur-sm border border-white/50 shadow-xl rounded-2xl overflow-hidden">
+            <CardHeader className="pb-4 bg-gradient-to-r from-blue-50/80 to-purple-50/80 border-b border-white/50">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl shadow-lg">
+                    <ImageIcon className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    Recent Screenshots ({screenshotCount})
+                  </span>
+                </CardTitle>
+                <div className="flex items-center gap-3">
+                  {screenshots.length > 1 && (
+                    <Button
+                      onClick={downloadAllScreenshots}
+                      variant="outline"
+                      size="sm"
+                      className="bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 text-emerald-700 border-emerald-300 shadow-sm transition-all duration-300 hover:shadow-md"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download All ZIP
+                    </Button>
+                  )}
+                  <Button 
+                    onClick={clearScreenshots} 
+                    variant="outline" 
+                    size="sm"
+                    className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all duration-300"
+                  >
+                    Clear All
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="flex gap-4 overflow-x-auto pb-3">
+                {screenshots.map((screenshot, index) => (
+                  <div key={screenshot.id} className="flex-shrink-0 group">
+                    <div className="relative">
+                      <img
+                        src={screenshot.url || "/placeholder.svg"}
+                        alt="Screenshot"
+                        className="w-20 h-28 object-contain bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 border-transparent group-hover:border-blue-400 transition-all duration-300 cursor-pointer shadow-sm group-hover:shadow-lg"
+                        onClick={() => openScreenshotModal(index)}
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-xl flex items-center justify-center">
+                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openScreenshotModal(index)
+                            }}
+                            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+                            title="View"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              downloadScreenshot(screenshot)
+                            }}
+                            className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+                            title="Download"
+                          >
+                            <Download className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-2 text-center font-medium">
+                      {screenshot.timestamp.toLocaleTimeString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Screenshot Modal */}
         {isScreenshotModalOpen && screenshots.length > 0 && (
