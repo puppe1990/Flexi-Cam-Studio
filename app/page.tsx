@@ -2726,46 +2726,48 @@ export default function CameraRecorder() {
   ])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100 p-4">
+      <div className="max-w-5xl mx-auto space-y-8">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-slate-800 flex items-center justify-center gap-2">
-            <Video className="w-8 h-8 text-blue-600" />
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center justify-center p-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-lg mb-4">
+            <Video className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-800 via-blue-800 to-purple-800 bg-clip-text text-transparent">
             FlexiCam Studio
           </h1>
-          <p className="text-slate-600">Professional camera recorder & video editor with real-time effects</p>
+          <p className="text-lg text-gray-600 font-medium">Professional camera recorder & video editor with real-time effects</p>
 
           {/* Format Support Status */}
-          <div className="flex items-center justify-center gap-4 text-sm">
-            <div className="flex items-center gap-1">
-              <Settings className="w-4 h-4" />
-              <span className={mp4RecordingSupported ? "text-green-600" : "text-amber-600"}>
+          <div className="flex items-center justify-center gap-4 text-sm flex-wrap">
+            <div className="flex items-center gap-2 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2 shadow-sm border border-white/50">
+              <Settings className="w-4 h-4 text-blue-600" />
+              <span className={`font-medium ${mp4RecordingSupported ? "text-emerald-600" : "text-amber-600"}`}>
                 {mp4RecordingSupported ? "Native MP4 Recording" : "MP4 via Conversion"}
               </span>
             </div>
             {webCodecsSupported && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 border-purple-200 shadow-sm">
                 WebCodecs Available
               </Badge>
             )}
             {isCropMode && (
-              <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
+              <Badge variant="outline" className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-300 text-orange-700 shadow-sm">
                 Crop Mode Active
               </Badge>
             )}
             {zoomLevel !== 1 && (
-              <Badge variant="outline" className="text-xs border-purple-300 text-purple-600">
+              <Badge variant="outline" className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-300 text-purple-700 shadow-sm">
                 Zoom {Math.round(zoomLevel * 100)}%
               </Badge>
             )}
             {isMirrored && (
-              <Badge variant="outline" className="text-xs border-green-300 text-green-600">
+              <Badge variant="outline" className="bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-300 text-emerald-700 shadow-sm">
                 Mirrored
               </Badge>
             )}
             {videoEffect !== ("none" as VideoEffect) && (
-              <Badge variant="outline" className="text-xs border-purple-300 text-purple-600">
+              <Badge variant="outline" className="bg-gradient-to-r from-violet-50 to-purple-50 border-violet-300 text-violet-700 shadow-sm">
                 {videoEffect === "blur" ? "Blur" : "Pixelate"} {effectIntensity}
                 {isEffectCropMode && " (Area)"}
               </Badge>
@@ -2774,68 +2776,86 @@ export default function CameraRecorder() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="camera" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-3 bg-white/60 backdrop-blur-sm border border-white/50 shadow-lg rounded-2xl p-1">
+            <TabsTrigger 
+              value="camera" 
+              className="flex items-center gap-2 rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 font-medium"
+            >
               <Camera className="w-4 h-4" />
               Camera Recorder
             </TabsTrigger>
-            <TabsTrigger value="editor" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="editor" 
+              className="flex items-center gap-2 rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 font-medium"
+            >
               <Edit3 className="w-4 h-4" />
               Video Effects Editor
             </TabsTrigger>
-            <TabsTrigger value="presentation" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="presentation" 
+              className="flex items-center gap-2 rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 font-medium"
+            >
               <Film className="w-4 h-4" />
               Video Presentation
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="camera" className="space-y-6">
+          <TabsContent value="camera" className="space-y-8 mt-8">
             {/* Screenshot Gallery */}
         {screenshots.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
+          <Card className="bg-white/70 backdrop-blur-sm border border-white/50 shadow-xl rounded-2xl overflow-hidden">
+            <CardHeader className="pb-4 bg-gradient-to-r from-blue-50/80 to-purple-50/80 border-b border-white/50">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5" />
-                  Recent Screenshots ({screenshotCount})
+                <CardTitle className="text-xl flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl shadow-lg">
+                    <ImageIcon className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    Recent Screenshots ({screenshotCount})
+                  </span>
                 </CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {screenshots.length > 1 && (
                     <Button
                       onClick={downloadAllScreenshots}
                       variant="outline"
                       size="sm"
-                      className="bg-green-50 hover:bg-green-100 text-green-700 border-green-300"
+                      className="bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 text-emerald-700 border-emerald-300 shadow-sm transition-all duration-300 hover:shadow-md"
                     >
-                      <Download className="w-4 h-4 mr-1" />
+                      <Download className="w-4 h-4 mr-2" />
                       Download All ZIP
                     </Button>
                   )}
-                  <Button onClick={clearScreenshots} variant="outline" size="sm">
+                  <Button 
+                    onClick={clearScreenshots} 
+                    variant="outline" 
+                    size="sm"
+                    className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all duration-300"
+                  >
                     Clear All
                   </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="flex gap-3 overflow-x-auto pb-2">
+            <CardContent className="p-6">
+              <div className="flex gap-4 overflow-x-auto pb-3">
                 {screenshots.map((screenshot, index) => (
                   <div key={screenshot.id} className="flex-shrink-0 group">
                     <div className="relative">
                       <img
                         src={screenshot.url || "/placeholder.svg"}
                         alt="Screenshot"
-                        className="w-16 h-24 object-contain bg-gray-100 rounded border-2 border-transparent group-hover:border-blue-400 transition-all cursor-pointer"
+                        className="w-20 h-28 object-contain bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 border-transparent group-hover:border-blue-400 transition-all duration-300 cursor-pointer shadow-sm group-hover:shadow-lg"
                         onClick={() => openScreenshotModal(index)}
                       />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded flex items-center justify-center">
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-xl flex items-center justify-center">
+                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
                               openScreenshotModal(index)
                             }}
-                            className="bg-blue-500 hover:bg-blue-600 text-white p-1 rounded"
+                            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
                             title="View"
                           >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2858,7 +2878,7 @@ export default function CameraRecorder() {
                               e.stopPropagation()
                               downloadScreenshot(screenshot)
                             }}
-                            className="bg-green-500 hover:bg-green-600 text-white p-1 rounded"
+                            className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
                             title="Download"
                           >
                             <Download className="w-3 h-3" />
@@ -2866,7 +2886,7 @@ export default function CameraRecorder() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-xs text-slate-500 mt-1 text-center">
+                    <div className="text-xs text-gray-500 mt-2 text-center font-medium">
                       {screenshot.timestamp.toLocaleTimeString()}
                     </div>
                   </div>
@@ -2878,15 +2898,15 @@ export default function CameraRecorder() {
 
         {/* Export Format Selection */}
         {recordingState === "stopped" || recordingState === "editing" ? (
-          <Card>
+          <Card className="bg-white/70 backdrop-blur-sm border border-white/50 shadow-xl rounded-2xl overflow-hidden">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-center gap-4">
-                <label className="text-sm font-medium">Export Format:</label>
+              <div className="flex items-center justify-center gap-6">
+                <label className="text-sm font-semibold text-gray-700">Export Format:</label>
                 <Select value={exportFormat} onValueChange={(value: ExportFormat) => setExportFormat(value)}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-40 h-10 bg-white/80 border-gray-200 shadow-sm rounded-xl hover:bg-white transition-all duration-300">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white/95 backdrop-blur-sm border border-white/50 shadow-xl rounded-xl">
                     <SelectItem value="webm">WebM</SelectItem>
                     <SelectItem value="mp4">MP4 (WhatsApp)</SelectItem>
                     <SelectItem value="avi">AVI (WhatsApp)</SelectItem>
@@ -2896,29 +2916,47 @@ export default function CameraRecorder() {
                 </Select>
 
                 {exportFormat === "mp4" && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 border-blue-200 shadow-sm">
                     {mp4RecordingSupported ? "Native" : "Converted"}
                   </Badge>
                 )}
               </div>
 
               {exportFormat === "mp4" && !mp4RecordingSupported && !webCodecsSupported && (
-                <div className="mt-2 text-center text-sm text-amber-600 bg-amber-50 rounded-lg p-2">
-                  ⚠️ MP4 export will use conversion method (may have compatibility limitations)
+                <div className="mt-4 text-center text-sm text-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span className="font-semibold">Note</span>
+                  </div>
+                  MP4 export will use conversion method (may have compatibility limitations)
                 </div>
               )}
               {(exportFormat === "mp4" ||
                 exportFormat === "avi" ||
                 exportFormat === "mov" ||
                 exportFormat === "3gp") && (
-                <div className="mt-2 text-center text-sm text-green-600 bg-green-50 rounded-lg p-2">
-                  ✅ This format is compatible with WhatsApp
+                <div className="mt-4 text-center text-sm text-emerald-700 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="font-semibold">Compatible</span>
+                  </div>
+                  This format is compatible with WhatsApp
                   {exportFormat === "3gp" && " (optimized for mobile networks)"}
                 </div>
               )}
               {(exportFormat === "avi" || exportFormat === "mov" || exportFormat === "3gp") && (
-                <div className="mt-2 text-center text-sm text-blue-600 bg-blue-50 rounded-lg p-2">
-                  ℹ️ Note: {exportFormat.toUpperCase()} format may be saved as MP4 due to browser limitations, but the
+                <div className="mt-4 text-center text-sm text-blue-700 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="font-semibold">Info</span>
+                  </div>
+                  {exportFormat.toUpperCase()} format may be saved as MP4 due to browser limitations, but the
                   file extension will be .{exportFormat}
                 </div>
               )}
@@ -2937,55 +2975,85 @@ export default function CameraRecorder() {
 
 
         {/* Main Video Card */}
-        <Card className="overflow-hidden">
-          <CardHeader className="pb-4">
+        <Card className="bg-white/70 backdrop-blur-sm border border-white/50 shadow-2xl rounded-3xl overflow-hidden">
+          <CardHeader className="pb-6 bg-gradient-to-r from-gray-50/80 to-blue-50/80 border-b border-white/50">
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-3 text-xl">
                 {recordingState === "recording" && (
                   <>
-                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                    Recording {isCropMode && "(Cropped)"}
+                    <div className="flex items-center gap-2 relative">
+                      <div className="w-4 h-4 bg-gradient-to-r from-red-500 to-red-600 rounded-full animate-pulse shadow-lg" />
+                      <div className="w-4 h-4 bg-red-500/30 rounded-full animate-ping absolute" />
+                    </div>
+                    <span className="bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent font-bold">
+                      Recording {isCropMode && "(Cropped)"}
+                    </span>
                   </>
                 )}
                 {recordingState === "idle" && (
                   <>
-                    <Camera className="w-5 h-5" />
-                    Camera Preview {isCropMode && "(Crop Mode)"}{" "}
-                    {zoomLevel !== 1 && `(${Math.round(zoomLevel * 100)}%)`}
+                    <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl shadow-lg">
+                      <Camera className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                      Camera Preview {isCropMode && "(Crop Mode)"}{" "}
+                      {zoomLevel !== 1 && `(${Math.round(zoomLevel * 100)}%)`}
+                    </span>
                   </>
                 )}
                 {recordingState === "stopped" && (
                   <>
-                    <Play className="w-5 h-5" />
-                    Video Preview
+                    <div className="p-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl shadow-lg">
+                      <Play className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                      Video Preview
+                    </span>
                   </>
                 )}
                 {recordingState === "editing" && (
                   <>
-                    <Scissors className="w-5 h-5" />
-                    Video Editor
+                    <div className="p-2 bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl shadow-lg">
+                      <Scissors className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                      Video Editor
+                    </span>
                   </>
                 )}
                 {recordingState === "processing" && (
                   <>
-                    <Clock className="w-5 h-5" />
-                    {exportFormat === "mp4" ? "Converting to MP4..." : "Processing Video..."}
+                    <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl shadow-lg">
+                      <Clock className="w-5 h-5 text-white animate-spin" />
+                    </div>
+                    <span className="bg-gradient-to-r from-purple-700 to-indigo-700 bg-clip-text text-transparent">
+                      {exportFormat === "mp4" ? "Converting to MP4..." : "Processing Video..."}
+                    </span>
                   </>
                 )}
               </CardTitle>
 
               {recordingState === "recording" && (
-                <Badge variant="destructive" className="animate-pulse">
+                <Badge variant="destructive" className="animate-pulse bg-gradient-to-r from-red-500 to-red-600 shadow-lg px-4 py-2 text-white font-bold">
                   {formatTime(recordingTime)}
                 </Badge>
               )}
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6 p-8">
             {/* Error Message */}
             {cameraError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">{cameraError}</div>
+              <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-2xl p-6 text-red-700 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-100 rounded-xl">
+                    <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <span className="font-semibold">{cameraError}</span>
+                </div>
+              </div>
             )}
 
             {/* Video Display */}
@@ -3659,15 +3727,18 @@ export default function CameraRecorder() {
 
                         {/* Quick Controls Below Video Preview */}
             {!isFullscreen && (
-              <div className="bg-slate-50 rounded-lg p-4 space-y-4">
+              <div className="bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-2xl p-6 space-y-6 border border-white/50 shadow-sm">
                 {/* Main Camera Controls */}
                 {recordingState === "idle" && (
-                  <div className="flex justify-center gap-3 flex-wrap">
+                  <div className="flex justify-center gap-4 flex-wrap">
                     <Button
                       onClick={toggleCropMode}
                       variant={isCropMode ? "default" : "outline"}
                       size="sm"
-                      className={isCropMode ? "bg-orange-500 hover:bg-orange-600" : ""}
+                      className={isCropMode 
+                        ? "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg" 
+                        : "bg-white/80 hover:bg-white border-orange-300 text-orange-700 hover:text-orange-800 transition-all duration-300"
+                      }
                     >
                       <Crop className="w-4 h-4 mr-2" />
                       {isCropMode ? "Exit Crop" : "Crop"}
@@ -3677,7 +3748,7 @@ export default function CameraRecorder() {
                       onClick={() => takeScreenshot()}
                       variant="outline"
                       size="sm"
-                      className="bg-blue-50 hover:bg-blue-100"
+                      className="bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-300 text-blue-700 hover:text-blue-800 transition-all duration-300 shadow-sm"
                       disabled={!!cameraError || isTimerActive || isCapturingScreenshot}
                     >
                       <ImageIcon className="w-4 h-4 mr-2" />
@@ -3691,7 +3762,7 @@ export default function CameraRecorder() {
                     <Button
                       onClick={startRecording}
                       size="sm"
-                      className="bg-red-500 hover:bg-red-600"
+                      className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg transition-all duration-300 hover:shadow-xl"
                       disabled={!!cameraError}
                     >
                       <Camera className="w-4 h-4 mr-2" />
@@ -3944,14 +4015,22 @@ export default function CameraRecorder() {
 
               {/* Playback Controls */}
               {recordingState === "stopped" && (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div className="flex justify-center gap-4 flex-wrap">
-                    <Button onClick={togglePlayback} variant="outline">
+                    <Button 
+                      onClick={togglePlayback} 
+                      variant="outline"
+                      className="bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-300 text-blue-700 hover:text-blue-800 transition-all duration-300 shadow-sm"
+                    >
                       {isPlaying ? <Pause className="w-5 h-5 mr-2" /> : <Play className="w-5 h-5 mr-2" />}
                       {isPlaying ? "Pause" : "Play"}
                     </Button>
 
-                    <Button onClick={() => setRecordingState("editing")} variant="outline">
+                    <Button 
+                      onClick={() => setRecordingState("editing")} 
+                      variant="outline"
+                      className="bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 border-orange-300 text-orange-700 hover:text-orange-800 transition-all duration-300 shadow-sm"
+                    >
                       <Scissors className="w-5 h-5 mr-2" />
                       Edit Video
                     </Button>
@@ -3959,13 +4038,17 @@ export default function CameraRecorder() {
                     <Button
                       onClick={downloadOriginalVideo}
                       variant="outline"
-                      className="bg-green-50 hover:bg-green-100"
+                      className="bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 border-emerald-300 text-emerald-700 hover:text-emerald-800 transition-all duration-300 shadow-sm"
                     >
                       <Download className="w-5 h-5 mr-2" />
                       Download {exportFormat.toUpperCase()}
                     </Button>
 
-                    <Button onClick={resetRecording} variant="outline">
+                    <Button 
+                      onClick={resetRecording} 
+                      variant="outline"
+                      className="bg-gradient-to-r from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 border-gray-300 text-gray-700 hover:text-gray-800 transition-all duration-300 shadow-sm"
+                    >
                       <RotateCcw className="w-5 h-5 mr-2" />
                       New Recording
                     </Button>
@@ -4283,11 +4366,20 @@ export default function CameraRecorder() {
         {/* Preview effect canvas is already in the video container */}
 
         {/* Instructions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">How to Use</CardTitle>
+        <Card className="bg-white/70 backdrop-blur-sm border border-white/50 shadow-xl rounded-2xl overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-indigo-50/80 to-purple-50/80 border-b border-white/50">
+            <CardTitle className="text-2xl flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                How to Use
+              </span>
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6 p-8">
             <div className="space-y-2 text-sm text-slate-600">
               <div className="flex items-start gap-2">
                 <span className="font-semibold text-blue-600">1.</span>
@@ -4370,70 +4462,74 @@ export default function CameraRecorder() {
             </div>
 
             {/* Keyboard Shortcuts */}
-            <div className="border-t pt-4">
-              <h4 className="font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
+            <div className="border-t border-gray-200 pt-6">
+              <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-3 text-lg">
+                <div className="p-2 bg-gradient-to-r from-gray-600 to-gray-700 rounded-xl">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                    />
+                  </svg>
+                </div>
                 Keyboard Shortcuts
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                <div className="flex items-center justify-between bg-slate-50 rounded px-3 py-2">
-                  <span>Toggle Crop Mode</span>
-                  <kbd className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono">C</kbd>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                  <span className="font-medium text-gray-700">Toggle Crop Mode</span>
+                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">C</kbd>
                 </div>
-                <div className="flex items-center justify-between bg-slate-50 rounded px-3 py-2">
-                  <span>Take Screenshot</span>
-                  <kbd className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono">S</kbd>
+                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                  <span className="font-medium text-gray-700">Take Screenshot</span>
+                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">S</kbd>
                 </div>
-                <div className="flex items-center justify-between bg-slate-50 rounded px-3 py-2">
-                  <span>Start/Stop Recording</span>
-                  <div className="flex gap-1">
-                    <kbd className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono">R</kbd>
-                    <span className="text-slate-400">or</span>
-                    <kbd className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono">Space</kbd>
+                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                  <span className="font-medium text-gray-700">Start/Stop Recording</span>
+                  <div className="flex gap-2">
+                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">R</kbd>
+                    <span className="text-gray-400 text-xs">or</span>
+                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">Space</kbd>
                   </div>
                 </div>
-                <div className="flex items-center justify-between bg-slate-50 rounded px-3 py-2">
-                  <span>Toggle Fullscreen</span>
-                  <kbd className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono">F</kbd>
+                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                  <span className="font-medium text-gray-700">Toggle Fullscreen</span>
+                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">F</kbd>
                 </div>
-                <div className="flex items-center justify-between bg-slate-50 rounded px-3 py-2">
-                  <span>Zoom In</span>
-                  <kbd className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono">+</kbd>
+                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                  <span className="font-medium text-gray-700">Zoom In</span>
+                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">+</kbd>
                 </div>
-                <div className="flex items-center justify-between bg-slate-50 rounded px-3 py-2">
-                  <span>Zoom Out</span>
-                  <kbd className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono">-</kbd>
+                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                  <span className="font-medium text-gray-700">Zoom Out</span>
+                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">-</kbd>
                 </div>
-                <div className="flex items-center justify-between bg-slate-50 rounded px-3 py-2">
-                  <span>Reset Zoom</span>
-                  <kbd className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono">0</kbd>
+                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                  <span className="font-medium text-gray-700">Reset Zoom</span>
+                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">0</kbd>
                 </div>
-                <div className="flex items-center justify-between bg-slate-50 rounded px-3 py-2">
-                  <span>Toggle Mirror</span>
-                  <kbd className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono">M</kbd>
+                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                  <span className="font-medium text-gray-700">Toggle Mirror</span>
+                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">M</kbd>
                 </div>
-                <div className="flex items-center justify-between bg-slate-50 rounded px-3 py-2">
-                  <span>Exit Modes/Fullscreen</span>
-                  <kbd className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono">Esc</kbd>
+                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                  <span className="font-medium text-gray-700">Exit Modes/Fullscreen</span>
+                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">Esc</kbd>
                 </div>
-                <div className="flex items-center justify-between bg-slate-50 rounded px-3 py-2">
-                  <span>Navigate Screenshots</span>
-                  <div className="flex gap-1">
-                    <kbd className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono">←</kbd>
-                    <kbd className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono">→</kbd>
+                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                  <span className="font-medium text-gray-700">Navigate Screenshots</span>
+                  <div className="flex gap-2">
+                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">←</kbd>
+                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">→</kbd>
                   </div>
                 </div>
               </div>
-              <p className="text-xs text-slate-500 mt-2">💡 Shortcuts work when not typing in input fields</p>
-              <p className="text-xs text-slate-500">🖱️ When zoomed in, drag to pan the video</p>
-              <p className="text-xs text-slate-500">🎨 Purple area shows where effects will be applied</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 text-xs">
+                <p className="text-gray-600 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200">💡 Shortcuts work when not typing in input fields</p>
+                <p className="text-gray-600 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-3 border border-purple-200">🖱️ When zoomed in, drag to pan the video</p>
+                <p className="text-gray-600 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-3 border border-violet-200">🎨 Purple area shows where effects will be applied</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -4714,5 +4810,5 @@ export default function CameraRecorder() {
         </Tabs>
       </div>
     </div>
-  )
-}
+      )
+  }
