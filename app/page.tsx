@@ -2088,34 +2088,80 @@ export default function CameraRecorder() {
     [screenshotFormat],
   )
 
-  // Download all screenshots as ZIP
+  // State for download progress
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false)
+  const [downloadProgress, setDownloadProgress] = useState(0)
+
+  // Download all screenshots as ZIP with progress indication
   const downloadAllScreenshots = useCallback(async () => {
-    if (screenshots.length === 0) return
+    if (screenshots.length === 0 || isDownloadingAll) return
+
+    setIsDownloadingAll(true)
+    setDownloadProgress(0)
 
     try {
       const zip = new JSZip()
+      const totalScreenshots = screenshots.length
 
-      // Add each screenshot to the ZIP
-      for (let i = 0; i < screenshots.length; i++) {
+      console.log(`Starting download of ${totalScreenshots} screenshots...`)
+
+      // Add each screenshot to the ZIP with progress tracking
+      for (let i = 0; i < totalScreenshots; i++) {
         const screenshot = screenshots[i]
 
-        // Fetch the blob from the URL
-        const response = await fetch(screenshot.url)
-        const blob = await response.blob()
+        try {
+          // Update progress
+          setDownloadProgress(Math.round((i / totalScreenshots) * 50)) // First 50% for fetching
 
-        // Create filename with timestamp and index
-        const filename = `screenshot-${screenshot.timestamp.getTime()}-${i + 1}.${screenshotFormat}`
+          // Fetch the blob from the URL with timeout
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
-        // Add to ZIP
-        zip.file(filename, blob)
+          const response = await fetch(screenshot.url, { 
+            signal: controller.signal 
+          })
+          clearTimeout(timeoutId)
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch screenshot ${i + 1}: ${response.status}`)
+          }
+
+          const blob = await response.blob()
+
+          // Create filename with timestamp and index
+          const timestamp = screenshot.timestamp.getTime()
+          const filename = `screenshot-${timestamp}-${String(i + 1).padStart(3, '0')}.${screenshotFormat}`
+
+          // Add to ZIP
+          zip.file(filename, blob)
+
+          console.log(`Added screenshot ${i + 1}/${totalScreenshots} to ZIP`)
+        } catch (error) {
+          console.error(`Error processing screenshot ${i + 1}:`, error)
+          // Continue with other screenshots
+        }
       }
 
-      // Generate ZIP file
-      const zipBlob = await zip.generateAsync({ type: "blob" })
+      // Update progress for ZIP generation
+      setDownloadProgress(60)
+      console.log("Generating ZIP file...")
+
+      // Generate ZIP file with progress callback
+      const zipBlob = await zip.generateAsync({ 
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 }
+      }, (metadata) => {
+        // Update progress during ZIP generation (60-90%)
+        const zipProgress = 60 + (metadata.percent * 0.3)
+        setDownloadProgress(Math.round(zipProgress))
+      })
+
+      setDownloadProgress(95)
 
       // Download ZIP
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
-      const zipFilename = `screenshots-${timestamp}.zip`
+      const zipFilename = `FlexiCam-Screenshots-${timestamp}-${totalScreenshots}files.zip`
 
       const url = URL.createObjectURL(zipBlob)
       const a = document.createElement("a")
@@ -2126,19 +2172,41 @@ export default function CameraRecorder() {
       a.click()
       document.body.removeChild(a)
 
+      setDownloadProgress(100)
+      console.log(`Successfully created ZIP with ${totalScreenshots} screenshots`)
+
+      // Clean up
       setTimeout(() => {
         URL.revokeObjectURL(url)
-      }, 1000)
+        setIsDownloadingAll(false)
+        setDownloadProgress(0)
+      }, 2000)
+
     } catch (error) {
       console.error("Error creating ZIP file:", error)
-      // Fallback: download screenshots individually
-      screenshots.forEach((screenshot, index) => {
-        setTimeout(() => {
-          downloadScreenshot(screenshot)
-        }, index * 500) // Stagger downloads to avoid browser blocking
-      })
+      setDownloadProgress(0)
+      
+      // Fallback: download screenshots individually with user confirmation
+      const fallbackDownload = window.confirm(
+        `Failed to create ZIP file. Would you like to download all ${screenshots.length} screenshots individually? This will trigger multiple downloads.`
+      )
+      
+      if (fallbackDownload) {
+        console.log("Starting individual downloads...")
+        screenshots.forEach((screenshot, index) => {
+          setTimeout(() => {
+            try {
+              downloadScreenshot(screenshot)
+            } catch (error) {
+              console.error(`Error downloading screenshot ${index + 1}:`, error)
+            }
+          }, index * 800) // Stagger downloads to avoid browser blocking
+        })
+      }
+      
+      setIsDownloadingAll(false)
     }
-  }, [screenshots, screenshotFormat, downloadScreenshot])
+  }, [screenshots, screenshotFormat, downloadScreenshot, isDownloadingAll])
 
   // Clear screenshots - simplified to avoid circular dependencies
   const clearScreenshots = useCallback(() => {
@@ -4180,10 +4248,26 @@ export default function CameraRecorder() {
                       onClick={downloadAllScreenshots}
                       variant="outline"
                       size="sm"
-                      className="bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 text-emerald-700 border-emerald-300 shadow-sm transition-all duration-300 hover:shadow-md"
+                      disabled={isDownloadingAll}
+                      className={`shadow-sm transition-all duration-300 ${
+                        isDownloadingAll 
+                          ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 text-blue-700 cursor-not-allowed"
+                          : "bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 text-emerald-700 border-emerald-300 hover:shadow-md"
+                      }`}
                     >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download All ZIP
+                      {isDownloadingAll ? (
+                        <>
+                          <div className="w-4 h-4 mr-2 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          {downloadProgress < 60 ? `Preparing... ${downloadProgress}%` 
+                           : downloadProgress < 95 ? `Creating ZIP... ${downloadProgress}%`
+                           : `Downloading... ${downloadProgress}%`}
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4 mr-2" />
+                          Download All ({screenshots.length}) ZIP
+                        </>
+                      )}
                     </Button>
                   )}
                   <Button 
@@ -4198,24 +4282,25 @@ export default function CameraRecorder() {
               </div>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="flex gap-4 overflow-x-auto pb-3">
+              {/* Grid Layout for Better Viewing */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 gap-4 max-h-96 overflow-y-auto">
                 {screenshots.map((screenshot, index) => (
-                  <div key={screenshot.id} className="flex-shrink-0 group">
+                  <div key={screenshot.id} className="group">
                     <div className="relative">
                       <img
                         src={screenshot.url || "/placeholder.svg"}
-                        alt="Screenshot"
-                        className="w-20 h-28 object-contain bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 border-transparent group-hover:border-blue-400 transition-all duration-300 cursor-pointer shadow-sm group-hover:shadow-lg"
+                        alt={`Screenshot ${index + 1}`}
+                        className="w-full aspect-[3/4] object-cover bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-transparent group-hover:border-blue-400 transition-all duration-300 cursor-pointer shadow-sm group-hover:shadow-lg"
                         onClick={() => openScreenshotModal(index)}
                       />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-xl flex items-center justify-center">
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-lg flex items-center justify-center">
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
                               openScreenshotModal(index)
                             }}
-                            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+                            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-1.5 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
                             title="View"
                           >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4238,20 +4323,31 @@ export default function CameraRecorder() {
                               e.stopPropagation()
                               downloadScreenshot(screenshot)
                             }}
-                            className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+                            className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white p-1.5 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
                             title="Download"
                           >
                             <Download className="w-3 h-3" />
                           </button>
                         </div>
                       </div>
+                      {/* Screenshot Number Badge */}
+                      <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
+                        {index + 1}
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500 mt-2 text-center font-medium">
+                    <div className="text-xs text-gray-500 mt-1 text-center font-medium truncate">
                       {screenshot.timestamp.toLocaleTimeString()}
                     </div>
                   </div>
                 ))}
               </div>
+              
+              {/* Show total count and scroll hint if many screenshots */}
+              {screenshots.length > 12 && (
+                <div className="mt-4 text-center text-sm text-gray-600 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200">
+                  📸 Showing all {screenshots.length} screenshots • Scroll up/down to see more • Click "Download All" to get ZIP file
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
