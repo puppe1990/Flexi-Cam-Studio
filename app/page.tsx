@@ -2926,197 +2926,11 @@ export default function CameraRecorder() {
           </Card>
         ) : null}
 
-        {/* Screenshot Format and Timer Selection */}
-        {recordingState === "idle" && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-center gap-6 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">Screenshot Format:</label>
-                  <Select
-                    value={screenshotFormat}
-                    onValueChange={(value: ScreenshotFormat) => setScreenshotFormat(value)}
-                  >
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="png">PNG</SelectItem>
-                      <SelectItem value="jpeg">JPEG</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">Timer:</label>
-                  <Select
-                    value={screenshotTimer.toString()}
-                    onValueChange={(value) => setScreenshotTimer(Number.parseInt(value))}
-                  >
-                    <SelectTrigger className="w-28">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">No Timer</SelectItem>
-                      <SelectItem value="3">3 seconds</SelectItem>
-                      <SelectItem value="5">5 seconds</SelectItem>
-                      <SelectItem value="10">10 seconds</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
-                {screenshotTimer > 0 && (
-                  <div className="text-xs text-slate-500 bg-blue-50 px-3 py-1 rounded-full">
-                    📸 {screenshotTimer}s delay enabled
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
-        {/* Aspect Ratio and Zoom Controls */}
-        {recordingState === "idle" && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-center gap-6 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">Video Aspect Ratio:</label>
-                  <Select value={aspectRatio} onValueChange={(value: AspectRatio) => setAspectRatio(value)}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="16:9">16:9 (Landscape)</SelectItem>
-                      <SelectItem value="9:16">9:16 (Vertical)</SelectItem>
-                      <SelectItem value="4:3">4:3 (Classic)</SelectItem>
-                      <SelectItem value="1:1">1:1 (Square)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">Zoom:</label>
-                  <div className="flex items-center gap-1">
-                    <Button onClick={zoomOut} variant="outline" size="sm" disabled={zoomLevel <= 0.5}>
-                      <ZoomOut className="w-4 h-4" />
-                    </Button>
-                    <span className="text-sm font-mono w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
-                    <Button onClick={zoomIn} variant="outline" size="sm" disabled={zoomLevel >= 3}>
-                      <ZoomIn className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      onClick={resetZoom}
-                      variant="outline"
-                      size="sm"
-                      disabled={zoomLevel === 1 && panOffset.x === 0 && panOffset.y === 0}
-                    >
-                      <ResetZoom className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">Mirror:</label>
-                  <Button
-                    onClick={toggleMirror}
-                    variant={isMirrored ? "default" : "outline"}
-                    size="sm"
-                    className={isMirrored ? "bg-green-500 hover:bg-green-600" : ""}
-                  >
-                    {isMirrored ? "On" : "Off"}
-                  </Button>
-                </div>
-
-                <div className="text-xs text-slate-500 bg-blue-50 px-3 py-1 rounded-full">
-                  {aspectRatio === "16:9" && "📺 Standard widescreen"}
-                  {aspectRatio === "9:16" && "📱 Mobile vertical (Stories, Reels)"}
-                  {aspectRatio === "4:3" && "📷 Classic camera ratio"}
-                  {aspectRatio === "1:1" && "⬜ Square (Instagram posts)"}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Effect Controls */}
-        {recordingState === "idle" && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-center gap-6 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium">Effect:</label>
-                    <Select value={videoEffect} onValueChange={(value: VideoEffect) => setVideoEffect(value)}>
-                      <SelectTrigger className="w-28">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        <SelectItem value="blur">Blur</SelectItem>
-                        <SelectItem value="pixelate">Pixelate</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {videoEffect !== ("none" as VideoEffect) && (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium">Intensity:</label>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-500">1</span>
-                          <Slider
-                            value={[effectIntensity]}
-                            min={1}
-                            max={10}
-                            step={1}
-                            onValueChange={([value]) => setEffectIntensity(value)}
-                            className="w-20"
-                          />
-                          <span className="text-xs text-slate-500">10</span>
-                          <span className="text-sm font-mono w-6 text-center">{effectIntensity}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium">Apply to:</label>
-                        <Button
-                          onClick={toggleEffectCropMode}
-                          variant={isEffectCropMode ? "default" : "outline"}
-                          size="sm"
-                          className={isEffectCropMode ? "bg-purple-500 hover:bg-purple-600" : ""}
-                        >
-                          {isEffectCropMode ? "Selected Area" : "Entire Video"}
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {videoEffect !== ("none" as VideoEffect) && isEffectCropMode && (
-                  <div className="text-center text-sm text-slate-600 bg-purple-50 rounded-lg p-3">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13 10V3L4 14h7v7l9-11h-7z"
-                        />
-                      </svg>
-                      <span className="font-medium">Effect Area Mode Active</span>
-                    </div>
-                    <p>{videoEffect === "blur" ? "Blur" : "Pixelate"} effect will only be applied to the purple area</p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Area: {Math.round(effectCropArea.width * 100)}% × {Math.round(effectCropArea.height * 100)}% •
-                      Position: {Math.round(effectCropArea.x * 100)}%, {Math.round(effectCropArea.y * 100)}%
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
 
 
@@ -3843,42 +3657,202 @@ export default function CameraRecorder() {
               )}
             </div>
 
-            {/* Controls */}
-            <div className="space-y-4">
-              {/* Camera Controls */}
-              {recordingState === "idle" && (
-                <div className="flex justify-center gap-4 flex-wrap">
-                  <Button
-                    onClick={toggleCropMode}
-                    variant={isCropMode ? "default" : "outline"}
-                    className={isCropMode ? "bg-orange-500 hover:bg-orange-600" : ""}
-                  >
-                    <Crop className="w-5 h-5 mr-2" />
-                    {isCropMode ? "Exit Crop Mode" : "Enable Crop Mode"}
-                  </Button>
+                        {/* Quick Controls Below Video Preview */}
+            {!isFullscreen && (
+              <div className="bg-slate-50 rounded-lg p-4 space-y-4">
+                {/* Main Camera Controls */}
+                {recordingState === "idle" && (
+                  <div className="flex justify-center gap-3 flex-wrap">
+                    <Button
+                      onClick={toggleCropMode}
+                      variant={isCropMode ? "default" : "outline"}
+                      size="sm"
+                      className={isCropMode ? "bg-orange-500 hover:bg-orange-600" : ""}
+                    >
+                      <Crop className="w-4 h-4 mr-2" />
+                      {isCropMode ? "Exit Crop" : "Crop"}
+                    </Button>
 
-                  <Button
-                    onClick={() => takeScreenshot()}
-                    variant="outline"
-                    className="bg-blue-50 hover:bg-blue-100"
-                    disabled={!!cameraError || isTimerActive || isCapturingScreenshot}
-                  >
-                    <ImageIcon className="w-5 h-5 mr-2" />
-                                          {isCapturingScreenshot
+                    <Button
+                      onClick={() => takeScreenshot()}
+                      variant="outline"
+                      size="sm"
+                      className="bg-blue-50 hover:bg-blue-100"
+                      disabled={!!cameraError || isTimerActive || isCapturingScreenshot}
+                    >
+                      <ImageIcon className="w-4 h-4 mr-2" />
+                      {isCapturingScreenshot
                         ? "Capturing..."
                         : isTimerActive
-                          ? `Taking in ${timerCountdown}s...`
-                          : `Take Screenshot${screenshotTimer > 0 ? ` (${screenshotTimer}s)` : ""}${isCropMode ? " (Cropped)" : ""}`}
-                  </Button>
+                          ? `${timerCountdown}s`
+                          : "Screenshot"}
+                    </Button>
 
-                  <Button
-                    onClick={startRecording}
-                    size="lg"
-                    className="bg-red-500 hover:bg-red-600"
-                    disabled={!!cameraError}
-                  >
-                    <Camera className="w-5 h-5 mr-2" />
-                    Start Recording {isCropMode && "(Cropped)"}
+                    <Button
+                      onClick={startRecording}
+                      size="sm"
+                      className="bg-red-500 hover:bg-red-600"
+                      disabled={!!cameraError}
+                    >
+                      <Camera className="w-4 h-4 mr-2" />
+                      Record
+                    </Button>
+                  </div>
+                )}
+
+                {/* Quick Settings Row */}
+                {recordingState === "idle" && (
+                  <div className="flex items-center justify-center gap-6 flex-wrap text-sm">
+                    {/* Aspect Ratio */}
+                    <div className="flex items-center gap-2">
+                      <label className="font-medium text-slate-700">Aspect:</label>
+                      <Select value={aspectRatio} onValueChange={(value: AspectRatio) => setAspectRatio(value)}>
+                        <SelectTrigger className="w-24 h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="16:9">16:9</SelectItem>
+                          <SelectItem value="9:16">9:16</SelectItem>
+                          <SelectItem value="4:3">4:3</SelectItem>
+                          <SelectItem value="1:1">1:1</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Zoom Controls */}
+                    <div className="flex items-center gap-2">
+                      <label className="font-medium text-slate-700">Zoom:</label>
+                      <div className="flex items-center gap-1">
+                        <Button onClick={zoomOut} variant="outline" size="sm" disabled={zoomLevel <= 0.5} className="h-6 w-6 p-0">
+                          <ZoomOut className="w-3 h-3" />
+                        </Button>
+                        <span className="text-xs font-mono w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
+                        <Button onClick={zoomIn} variant="outline" size="sm" disabled={zoomLevel >= 3} className="h-6 w-6 p-0">
+                          <ZoomIn className="w-3 h-3" />
+                        </Button>
+                        {(zoomLevel !== 1 || panOffset.x !== 0 || panOffset.y !== 0) && (
+                          <Button onClick={resetZoom} variant="outline" size="sm" className="h-6 w-6 p-0">
+                            <ResetZoom className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Mirror Toggle */}
+                    <div className="flex items-center gap-2">
+                      <label className="font-medium text-slate-700">Mirror:</label>
+                      <Button
+                        onClick={toggleMirror}
+                        variant={isMirrored ? "default" : "outline"}
+                        size="sm"
+                        className={`h-6 px-2 text-xs ${isMirrored ? "bg-green-500 hover:bg-green-600" : ""}`}
+                      >
+                        {isMirrored ? "On" : "Off"}
+                      </Button>
+                    </div>
+
+                    {/* Timer */}
+                    <div className="flex items-center gap-2">
+                      <label className="font-medium text-slate-700">Timer:</label>
+                      <Select value={screenshotTimer.toString()} onValueChange={(value) => setScreenshotTimer(Number.parseInt(value))}>
+                        <SelectTrigger className="w-16 h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Off</SelectItem>
+                          <SelectItem value="3">3s</SelectItem>
+                          <SelectItem value="5">5s</SelectItem>
+                          <SelectItem value="10">10s</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Format */}
+                    <div className="flex items-center gap-2">
+                      <label className="font-medium text-slate-700">Format:</label>
+                      <Select value={screenshotFormat} onValueChange={(value: ScreenshotFormat) => setScreenshotFormat(value)}>
+                        <SelectTrigger className="w-20 h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="png">PNG</SelectItem>
+                          <SelectItem value="jpeg">JPEG</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Effects Row */}
+                {recordingState === "idle" && (
+                  <div className="flex items-center justify-center gap-4 flex-wrap text-sm border-t pt-3">
+                    <div className="flex items-center gap-2">
+                      <label className="font-medium text-slate-700">Effect:</label>
+                      <Select value={videoEffect} onValueChange={(value: VideoEffect) => setVideoEffect(value)}>
+                        <SelectTrigger className="w-24 h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="blur">Blur</SelectItem>
+                          <SelectItem value="pixelate">Pixelate</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {videoEffect !== ("none" as VideoEffect) && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <label className="font-medium text-slate-700">Level:</label>
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              onClick={() => setEffectIntensity(Math.max(1, effectIntensity - 1))}
+                              variant="outline" 
+                              size="sm" 
+                              disabled={effectIntensity <= 1}
+                              className="h-6 w-6 p-0"
+                            >
+                              -
+                            </Button>
+                            <span className="text-xs font-mono w-6 text-center">{effectIntensity}</span>
+                            <Button 
+                              onClick={() => setEffectIntensity(Math.min(10, effectIntensity + 1))}
+                              variant="outline" 
+                              size="sm" 
+                              disabled={effectIntensity >= 10}
+                              className="h-6 w-6 p-0"
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <label className="font-medium text-slate-700">Area:</label>
+                          <Button
+                            onClick={toggleEffectCropMode}
+                            variant={isEffectCropMode ? "default" : "outline"}
+                            size="sm"
+                            className={`h-6 px-2 text-xs ${isEffectCropMode ? "bg-purple-500 hover:bg-purple-600" : ""}`}
+                          >
+                            {isEffectCropMode ? "On" : "Off"}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Controls */}
+            <div className="space-y-4">
+              {/* Recording Controls */}
+              {recordingState === "recording" && (
+                <div className="flex justify-center gap-4">
+                  <Button onClick={stopRecording} size="lg" variant="destructive">
+                    <Square className="w-5 h-5 mr-2" />
+                    Stop Recording
                   </Button>
                 </div>
               )}
