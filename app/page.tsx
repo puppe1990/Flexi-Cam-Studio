@@ -75,6 +75,7 @@ export default function CameraRecorder() {
   const [screenshotTimer, setScreenshotTimer] = useState<number>(0) // 0 = no timer
   const [isTimerActive, setIsTimerActive] = useState(false)
   const [timerCountdown, setTimerCountdown] = useState<number>(0)
+  const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false)
 
   // Crop functionality
   const [isCropMode, setIsCropMode] = useState(false)
@@ -132,6 +133,8 @@ export default function CameraRecorder() {
   const chunksRef = useRef<Blob[]>([])
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const previewEffectAnimationRef = useRef<number | null>(null)
+  const isCapturingRef = useRef<boolean>(false)
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
 
 
@@ -1698,28 +1701,85 @@ export default function CameraRecorder() {
   // Take screenshot (with crop if enabled and timer support)
   const takeScreenshot = useCallback(
     async (withTimer = true) => {
-      if (!videoRef.current || !screenshotCanvasRef.current || recordingState !== "idle") return
+      console.log('📸 takeScreenshot called:', { withTimer, isTimerActive, isCapturingScreenshot, screenshotTimer })
+      
+      if (!videoRef.current || !screenshotCanvasRef.current || recordingState !== "idle") {
+        console.log('📸 Early return:', { hasVideo: !!videoRef.current, hasCanvas: !!screenshotCanvasRef.current, recordingState })
+        return
+      }
+
+      // Prevent multiple simultaneous screenshot captures using ref for immediate protection
+      if (isCapturingRef.current || isCapturingScreenshot) {
+        console.log('📸 Already capturing screenshot, ignoring call')
+        return
+      }
 
       // If timer is set and this is a manual trigger, start countdown
       if (withTimer && screenshotTimer > 0 && !isTimerActive) {
+        console.log('📸 Starting timer countdown:', screenshotTimer)
+        
+        // Clear any existing timer
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current)
+        }
+        
         setIsTimerActive(true)
-        setTimerCountdown(screenshotTimer) // Initialize countdown with the timer value
+        setTimerCountdown(screenshotTimer)
 
-        const countdownInterval = setInterval(() => {
-          setTimerCountdown((prev) => {
-            if (prev <= 1) {
-              clearInterval(countdownInterval)
-              setIsTimerActive(false)
-              // Take the actual screenshot after countdown
-              takeScreenshot(false)
-              return 0
-            }
-            return prev - 1
-          })
+        let currentCount = screenshotTimer
+        timerIntervalRef.current = setInterval(() => {
+          currentCount--
+          console.log('📸 Timer countdown:', currentCount)
+          setTimerCountdown(currentCount)
+          
+          if (currentCount <= 0) {
+            console.log('📸 Timer finished, taking screenshot')
+            clearInterval(timerIntervalRef.current!)
+            timerIntervalRef.current = null
+            setIsTimerActive(false)
+            // Schedule the actual screenshot to avoid timing conflicts
+            setTimeout(() => {
+              actuallyTakeScreenshot()
+            }, 100)
+          }
         }, 1000)
 
         return
       }
+
+      // Direct screenshot without timer
+      console.log('📸 Taking direct screenshot')
+      actuallyTakeScreenshot()
+    },
+    [recordingState, screenshotTimer, isTimerActive, isCapturingScreenshot],
+  )
+
+  // Separate function for the actual screenshot logic to avoid recursion
+  const actuallyTakeScreenshot = useCallback(
+    async () => {
+      console.log('📸 actuallyTakeScreenshot called:', { isCapturingScreenshot, isCapturingRef: isCapturingRef.current })
+      
+      if (!videoRef.current || !screenshotCanvasRef.current || recordingState !== "idle") {
+        console.log('📸 actuallyTakeScreenshot early return:', { hasVideo: !!videoRef.current, hasCanvas: !!screenshotCanvasRef.current, recordingState })
+        return
+      }
+
+      // Prevent multiple simultaneous captures using ref for immediate protection
+      if (isCapturingRef.current || isCapturingScreenshot) {
+        console.log('📸 Already capturing screenshot in actuallyTakeScreenshot, ignoring')
+        return
+      }
+
+      console.log('📸 Starting screenshot capture')
+      isCapturingRef.current = true
+      setIsCapturingScreenshot(true)
+
+      // Safety timeout to reset flags in case something goes wrong
+      const safetyTimeout = setTimeout(() => {
+        console.log('📸 Safety timeout triggered, resetting capture flags')
+        isCapturingRef.current = false
+        setIsCapturingScreenshot(false)
+      }, 5000) // 5 second timeout
 
       const video = videoRef.current
       const canvas = screenshotCanvasRef.current
@@ -1976,6 +2036,12 @@ export default function CameraRecorder() {
               console.log(`✅ Screenshot saved successfully! Check if it's vertical: ${canvas.height > canvas.width}`)
             } catch (error) {
               console.error("Error creating screenshot:", error)
+            } finally {
+              // Always reset the capturing flags
+              clearTimeout(safetyTimeout)
+              isCapturingRef.current = false
+              setIsCapturingScreenshot(false)
+              console.log('📸 Screenshot capture completed, flags reset')
             }
           }
         },
@@ -1983,13 +2049,23 @@ export default function CameraRecorder() {
         quality,
       )
     },
-    [recordingState, screenshotFormat, isCropMode, cropArea, screenshotTimer, isTimerActive, isFullscreen, isMirrored, isEffectCropMode, videoEffect, effectIntensity, applyEffectToScreenshot, aspectRatio, getVideoDisplayArea],
+    [recordingState, screenshotFormat, isCropMode, cropArea, isFullscreen, isMirrored, isEffectCropMode, videoEffect, effectIntensity, applyEffectToScreenshot, aspectRatio, getVideoDisplayArea, isCapturingScreenshot],
   )
 
   // Cancel screenshot timer
   const cancelScreenshotTimer = useCallback(() => {
+    console.log('📸 Timer cancelled')
+    
+    // Clear timer interval
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current)
+      timerIntervalRef.current = null
+    }
+    
     setIsTimerActive(false)
     setTimerCountdown(0)
+    isCapturingRef.current = false
+    setIsCapturingScreenshot(false) // Reset capture flags when cancelling
   }, [])
 
   // Download screenshot
@@ -2443,6 +2519,9 @@ export default function CameraRecorder() {
       }
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current)
+      }
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current)
       }
       // Cleanup on unmount
       setScreenshots((prevScreenshots) => {
@@ -3500,10 +3579,10 @@ export default function CameraRecorder() {
                           variant="outline"
                           size="sm"
                           className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                          disabled={!!cameraError || isTimerActive}
+                          disabled={!!cameraError || isTimerActive || isCapturingScreenshot}
                         >
                           <ImageIcon className="w-4 h-4 mr-2" />
-                          {isTimerActive ? `${timerCountdown}s` : "Screenshot"}
+                          {isCapturingScreenshot ? "Capturing..." : isTimerActive ? `${timerCountdown}s` : "Screenshot"}
                         </Button>
                         <Button
                           onClick={startRecording}
@@ -3782,12 +3861,14 @@ export default function CameraRecorder() {
                     onClick={() => takeScreenshot()}
                     variant="outline"
                     className="bg-blue-50 hover:bg-blue-100"
-                    disabled={!!cameraError || isTimerActive}
+                    disabled={!!cameraError || isTimerActive || isCapturingScreenshot}
                   >
                     <ImageIcon className="w-5 h-5 mr-2" />
-                    {isTimerActive
-                      ? `Taking in ${timerCountdown}s...`
-                      : `Take Screenshot${screenshotTimer > 0 ? ` (${screenshotTimer}s)` : ""}${isCropMode ? " (Cropped)" : ""}`}
+                                          {isCapturingScreenshot
+                        ? "Capturing..."
+                        : isTimerActive
+                          ? `Taking in ${timerCountdown}s...`
+                          : `Take Screenshot${screenshotTimer > 0 ? ` (${screenshotTimer}s)` : ""}${isCropMode ? " (Cropped)" : ""}`}
                   </Button>
 
                   <Button
