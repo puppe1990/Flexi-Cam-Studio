@@ -24,7 +24,7 @@ export const useScreenshot = () => {
   const addScreenshot = useCallback((screenshot: Screenshot) => {
     setScreenshotState(prev => ({
       ...prev,
-      screenshots: [screenshot, ...prev.screenshots.slice(0, 4)], // Keep last 5 screenshots
+      screenshots: [screenshot, ...prev.screenshots], // Keep all screenshots
       screenshotCount: prev.screenshotCount + 1,
     }))
   }, [])

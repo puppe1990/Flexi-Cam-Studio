@@ -229,7 +229,7 @@ export default function VideoEffectsEditor({
         try {
           tempCtx.filter = `blur(${blurAmount}px)`
           tempCtx.drawImage(tempCanvas, 0, 0)
-        } catch (error) {
+        } catch {
           // Fallback to manual blur
           const imageData = tempCtx.getImageData(0, 0, effectWidth, effectHeight)
           const blurredData = applyManualBlur(imageData, Math.ceil(blurAmount / 2))
@@ -678,7 +678,7 @@ export default function VideoEffectsEditor({
               {isEffectCropMode && videoEffect !== ("none" as VideoEffect) && editorVideoContainerRef.current && (
                 <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
                   {(() => {
-                    const containerRect = editorVideoContainerRef.current!.getBoundingClientRect()
+                    // const containerRect = editorVideoContainerRef.current!.getBoundingClientRect()
                     
                     return (
                       <div

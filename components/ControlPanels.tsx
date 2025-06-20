@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Slider } from "@/components/ui/slider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Settings, ZoomIn, ZoomOut, ZoomInIcon as ResetZoom } from "lucide-react"
+import { ZoomIn, ZoomOut, ZoomInIcon as ResetZoom } from "lucide-react"
 import { 
   ExportFormat, 
   ScreenshotFormat, 

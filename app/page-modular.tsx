@@ -1,19 +1,20 @@
 "use client"
 
 import React from "react"
-import { Button } from "@/components/ui/button"
+// import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Camera, Video } from "lucide-react"
+// import { Camera, Video } from "lucide-react"
+import { Video } from "lucide-react"
 
 // Import custom hooks
-import { useCamera } from "@/hooks/useCamera"
+// import { useCamera } from "@/hooks/useCamera"
 import { useScreenshot } from "@/hooks/useScreenshot"
 
 // Import components
 import { ScreenshotGallery } from "@/components/ScreenshotGallery"
 
 export default function CameraRecorderModular() {
-  const { cameraState, initializeCamera } = useCamera()
+  // const { cameraState, initializeCamera } = useCamera()
   const { screenshotState, downloadScreenshot, downloadAllScreenshots, clearScreenshots, openScreenshotModal } = useScreenshot()
 
   return (

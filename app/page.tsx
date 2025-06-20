@@ -83,7 +83,7 @@ export default function CameraRecorder() {
   const [isResizing, setIsResizing] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [resizeHandle, setResizeHandle] = useState<string>("")
-  const [videoContainerSize, setVideoContainerSize] = useState({ width: 0, height: 0 })
+  const [, setVideoContainerSize] = useState({ width: 0, height: 0 })
 
   // Aspect ratio functionality
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "4:3" | "1:1">("16:9")
@@ -1133,7 +1133,7 @@ export default function CameraRecorder() {
         // Clear the temp canvas and draw the blurred version
         tempCtx.clearRect(0, 0, effectWidth, effectHeight)
         tempCtx.drawImage(blurCanvas, 0, 0)
-      } catch (error) {
+      } catch {
         // Fallback: Manual blur using multiple passes (less efficient but more compatible)
         const imageData = tempCtx.getImageData(0, 0, effectWidth, effectHeight)
         const blurredData = applyManualBlur(imageData, Math.ceil(blurAmount / 2))
@@ -1229,9 +1229,6 @@ export default function CameraRecorder() {
 
       // Apply effect to specific area if effect crop mode is enabled
       if (isEffectCropMode && videoEffect !== ("none" as VideoEffect)) {
-        const videoWidth = video.videoWidth || 1280
-        const videoHeight = video.videoHeight || 720
-
         // Use consistent coordinate calculation
         const effectArea = calculateEffectAreaInVideoSpace(canvas.width, canvas.height)
         const clampedX = effectArea.x
@@ -1377,8 +1374,8 @@ export default function CameraRecorder() {
     const videoArea = getVideoDisplayArea()
     
     // Convert mouse coordinates relative to the actual video display area
-    const relativeX = (e.clientX - rect.left - videoArea.videoOffsetX) / videoArea.displayedVideoWidth
-    const relativeY = (e.clientY - rect.top - videoArea.videoOffsetY) / videoArea.displayedVideoHeight
+    // const relativeX = (e.clientX - rect.left - videoArea.videoOffsetX) / videoArea.displayedVideoWidth
+    // const relativeY = (e.clientY - rect.top - videoArea.videoOffsetY) / videoArea.displayedVideoHeight
 
     setDragStart({ x: e.clientX, y: e.clientY })
 
@@ -1404,8 +1401,8 @@ export default function CameraRecorder() {
     const videoArea = getVideoDisplayArea()
     
     // Convert mouse coordinates relative to the actual video display area
-    const relativeX = (e.clientX - rect.left - videoArea.videoOffsetX) / videoArea.displayedVideoWidth
-    const relativeY = (e.clientY - rect.top - videoArea.videoOffsetY) / videoArea.displayedVideoHeight
+    // const relativeX = (e.clientX - rect.left - videoArea.videoOffsetX) / videoArea.displayedVideoWidth
+    // const relativeY = (e.clientY - rect.top - videoArea.videoOffsetY) / videoArea.displayedVideoHeight
 
     setEffectDragStart({ x: e.clientX, y: e.clientY })
 
@@ -1422,9 +1419,9 @@ export default function CameraRecorder() {
       if (!videoContainerRef.current || !videoRef.current || (!isDragging && !isResizing && !isEffectDragging && !isEffectResizing)) return
 
       // Use the correct element bounds based on fullscreen mode
-      const rect = isFullscreen 
-        ? videoRef.current.getBoundingClientRect()
-        : videoContainerRef.current.getBoundingClientRect()
+      // const rect = isFullscreen 
+      //   ? videoRef.current.getBoundingClientRect()
+      //   : videoContainerRef.current.getBoundingClientRect()
       const videoArea = getVideoDisplayArea()
 
       // Handle regular crop area
@@ -1547,7 +1544,7 @@ export default function CameraRecorder() {
       document.addEventListener("mouseup", handleCropMouseUp)
       return () => {
         document.removeEventListener("mousemove", handleCropMouseMove)
-        document.removeEventListener("mouseup", handlePanEnd)
+        document.removeEventListener("mouseup", handleCropMouseUp)
       }
     }
   }, [
@@ -1600,7 +1597,7 @@ export default function CameraRecorder() {
         try {
           ctx.filter = `blur(${blurAmount}px)`
           ctx.drawImage(canvas, 0, 0)
-        } catch (error) {
+        } catch {
           // Fallback to manual blur
           const blurredData = applyManualBlur(imageData, Math.ceil(blurAmount / 2))
           ctx.putImageData(blurredData, 0, 0)
@@ -1657,7 +1654,7 @@ export default function CameraRecorder() {
           ctx.drawImage(tempCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, 
                        effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
         }
-      } catch (error) {
+      } catch {
         // Fallback to manual blur
         const blurredData = applyManualBlur(imageData, Math.ceil(blurAmount / 2))
         ctx.putImageData(blurredData, effectAreaInCanvas.x, effectAreaInCanvas.y)
@@ -1973,7 +1970,7 @@ export default function CameraRecorder() {
                 timestamp: new Date(),
               }
 
-              setScreenshots((prev) => [newScreenshot, ...prev.slice(0, 4)]) // Keep last 5 screenshots
+              setScreenshots((prev) => [newScreenshot, ...prev]) // Keep all screenshots
               setScreenshotCount((prev) => prev + 1)
               
               console.log(`✅ Screenshot saved successfully! Check if it's vertical: ${canvas.height > canvas.width}`)
@@ -2375,16 +2372,16 @@ export default function CameraRecorder() {
   }, [recordedBlob, videoDuration])
 
   // Clean up thumbnails - simplified to avoid circular dependencies
-  const cleanupThumbnails = useCallback(() => {
-    setThumbnails((prevThumbnails) => {
-      // Clean up URLs
-      prevThumbnails.forEach((thumbnail) => {
-        if (thumbnail.url.startsWith("data:")) return // Don't revoke data URLs
-        URL.revokeObjectURL(thumbnail.url)
-      })
-      return []
-    })
-  }, [])
+  // const cleanupThumbnails = useCallback(() => {
+  //   setThumbnails((prevThumbnails) => {
+  //     // Clean up URLs
+  //     prevThumbnails.forEach((thumbnail) => {
+  //       if (thumbnail.url.startsWith("data:")) return // Don't revoke data URLs
+  //       URL.revokeObjectURL(thumbnail.url)
+  //     })
+  //     return []
+  //   })
+  // }, [])
 
   // Reset to start over
   const resetRecording = useCallback(() => {
@@ -2698,7 +2695,7 @@ export default function CameraRecorder() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="camera" className="flex items-center gap-2">
               <Camera className="w-4 h-4" />
               Camera Recorder
@@ -2706,6 +2703,10 @@ export default function CameraRecorder() {
             <TabsTrigger value="editor" className="flex items-center gap-2">
               <Edit3 className="w-4 h-4" />
               Video Effects Editor
+            </TabsTrigger>
+            <TabsTrigger value="presentation" className="flex items-center gap-2">
+              <Film className="w-4 h-4" />
+              Video Presentation
             </TabsTrigger>
           </TabsList>
 
@@ -4325,6 +4326,264 @@ export default function CameraRecorder() {
               applyManualBlur={applyManualBlur}
               downloadBlob={downloadBlob}
             />
+          </TabsContent>
+
+          <TabsContent value="presentation" className="h-screen flex flex-col">
+            {/* Main Presentation Interface - Full Height */}
+            <div className="flex flex-1 overflow-hidden">
+              {/* Interactive Whiteboard Area */}
+              <div className="flex-1 relative">
+                {/* Toolbar */}
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
+                  <div className="flex items-center gap-3 bg-white rounded-full shadow-lg px-4 py-2 border">
+                    <Button size="sm" variant="ghost" className="rounded-full p-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                      </svg>
+                    </Button>
+                    <div className="w-px h-6 bg-gray-200"></div>
+                    <Button size="sm" variant="ghost" className="rounded-full p-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </Button>
+                    <Button size="sm" variant="ghost" className="rounded-full p-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </Button>
+                    <Button size="sm" variant="ghost" className="rounded-full p-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m3 0H4a1 1 0 00-1 1v16a1 1 0 001 1h16a1 1 0 001-1V5a1 1 0 00-1-1z" />
+                      </svg>
+                    </Button>
+                    <Button size="sm" variant="ghost" className="rounded-full p-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </Button>
+                    <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-4">
+                      + Add Note
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Whiteboard Canvas */}
+                <div className="w-full h-full bg-gray-50 relative overflow-hidden">
+                  {/* Grid Pattern */}
+                  <div 
+                    className="absolute inset-0 opacity-30"
+                    style={{
+                      backgroundImage: `
+                        linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)
+                      `,
+                      backgroundSize: '20px 20px'
+                    }}
+                  ></div>
+
+                  {/* Sticky Notes */}
+                  {/* Yellow Idea Note */}
+                  <div className="absolute top-32 left-32 w-48 h-32 bg-yellow-200 border border-yellow-300 rounded-lg p-3 shadow-md cursor-move hover:shadow-lg transition-shadow">
+                    <div className="text-xs font-semibold text-yellow-800 mb-1">Idea</div>
+                    <div className="text-sm text-yellow-900 leading-tight">
+                      Launch campaign for Q3. Target early adopters!
+                    </div>
+                    <div className="absolute bottom-2 left-3 text-xs text-yellow-600 flex items-center gap-1">
+                      <div className="w-4 h-4 bg-yellow-400 rounded-full"></div>
+                      Sam
+                    </div>
+                  </div>
+
+                  {/* Pink Feedback Note */}
+                  <div className="absolute top-48 left-80 w-44 h-28 bg-pink-200 border border-pink-300 rounded-lg p-3 shadow-md cursor-move hover:shadow-lg transition-shadow">
+                    <div className="text-xs font-semibold text-pink-800 mb-1">Feedback</div>
+                    <div className="text-sm text-pink-900 leading-tight">
+                      Improve mobile responsiveness
+                    </div>
+                    <div className="absolute bottom-2 left-3 text-xs text-pink-600 flex items-center gap-1">
+                      <div className="w-4 h-4 bg-pink-400 rounded-full"></div>
+                      Lucy
+                    </div>
+                  </div>
+
+                  {/* Blue Research Note */}
+                  <div className="absolute top-20 left-96 w-52 h-36 bg-blue-200 border border-blue-300 rounded-lg p-3 shadow-md cursor-move hover:shadow-lg transition-shadow">
+                    <div className="text-xs font-semibold text-blue-800 mb-1">Research</div>
+                    <div className="text-sm text-blue-900 leading-tight">
+                      Look into competitors' onboarding flows for inspiration.
+                    </div>
+                    <div className="absolute bottom-2 left-3 text-xs text-blue-600 flex items-center gap-1">
+                      <div className="w-4 h-4 bg-blue-400 rounded-full"></div>
+                      Alex
+                    </div>
+                  </div>
+
+                  {/* Green To-do Note */}
+                  <div className="absolute top-64 left-48 w-48 h-40 bg-green-200 border border-green-300 rounded-lg p-3 shadow-md cursor-move hover:shadow-lg transition-shadow">
+                    <div className="text-xs font-semibold text-green-800 mb-1">To-do</div>
+                    <div className="text-sm text-green-900 leading-tight">
+                      • Finalize slides<br/>
+                      • Review with marketing<br/>
+                      • Email team by EOD
+                    </div>
+                    <div className="absolute bottom-2 left-3 text-xs text-green-600 flex items-center gap-1">
+                      <div className="w-4 h-4 bg-green-400 rounded-full"></div>
+                      Mike
+                    </div>
+                  </div>
+
+                  {/* Orange Blocker Note */}
+                  <div className="absolute top-32 right-80 w-44 h-32 bg-orange-200 border border-orange-300 rounded-lg p-3 shadow-md cursor-move hover:shadow-lg transition-shadow">
+                    <div className="text-xs font-semibold text-orange-800 mb-1">Blocker</div>
+                    <div className="text-sm text-orange-900 leading-tight">
+                      API quota reached. Need an upgrade.
+                    </div>
+                    <div className="absolute bottom-2 left-3 text-xs text-orange-600 flex items-center gap-1">
+                      <div className="w-4 h-4 bg-orange-400 rounded-full"></div>
+                      Jen
+                    </div>
+                  </div>
+
+                  {/* Presenter Video - Hexagonal Frame in Bottom Right */}
+                  <div className="absolute bottom-8 right-8 z-10">
+                    <div className="relative w-32 h-32">
+                      {/* Hexagonal Clip Path */}
+                      <div 
+                        className="w-full h-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center"
+                        style={{
+                          clipPath: 'polygon(25% 6.7%, 75% 6.7%, 100% 50%, 75% 93.3%, 25% 93.3%, 0% 50%)'
+                        }}
+                      >
+                        {/* Placeholder presenter - this would be the actual video stream */}
+                        <div className="w-28 h-28 bg-gray-200 rounded-full flex items-center justify-center text-gray-500"
+                             style={{
+                               clipPath: 'polygon(25% 6.7%, 75% 6.7%, 100% 50%, 75% 93.3%, 25% 93.3%, 0% 50%)'
+                             }}>
+                          <Camera className="w-8 h-8" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Sidebar - Tools Panel */}
+              <div className="w-80 bg-gray-900 text-white p-4 space-y-6 overflow-y-auto">
+                {/* Presenter Header */}
+                <div className="text-center">
+                  <h2 className="text-lg font-semibold">Presenter</h2>
+                  <div className="flex justify-center gap-2 mt-2">
+                    <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white p-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white p-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Real Background */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">Real background</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col items-center gap-2 p-3 rounded-lg bg-gray-800 border border-gray-600">
+                      <div className="w-8 h-8 bg-gray-600 rounded flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </div>
+                      <span className="text-xs">Visible</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-gray-800 cursor-pointer">
+                      <div className="w-8 h-8 bg-gray-700 rounded flex items-center justify-center">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </div>
+                      <span className="text-xs text-gray-400">Blurred</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-gray-800 cursor-pointer">
+                      <div className="w-8 h-8 bg-gray-700 rounded flex items-center justify-center">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                        </svg>
+                      </div>
+                      <span className="text-xs text-gray-400">Hidden</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Shape */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">Shape</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button variant="ghost" className="h-12 w-full border border-gray-600 hover:bg-gray-800">
+                      <div className="w-6 h-4 border border-current rounded-sm"></div>
+                    </Button>
+                    <Button variant="ghost" className="h-12 w-full border border-gray-600 hover:bg-gray-800">
+                      <div className="w-5 h-5 border border-current rounded-full"></div>
+                    </Button>
+                    <Button variant="ghost" className="h-12 w-full border border-gray-600 hover:bg-gray-800">
+                      <div 
+                        className="w-6 h-6 border border-current"
+                        style={{
+                          clipPath: 'polygon(25% 6.7%, 75% 6.7%, 100% 50%, 75% 93.3%, 25% 93.3%, 0% 50%)'
+                        }}
+                      ></div>
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    <Button variant="ghost" className="h-12 w-full text-gray-400 hover:text-white">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </Button>
+                    <Button variant="ghost" className="h-12 w-full bg-red-500 hover:bg-red-600 text-white">
+                      <div className="w-5 h-5 bg-white rounded"></div>
+                    </Button>
+                    <Button variant="ghost" className="h-12 w-full bg-blue-500 hover:bg-blue-600 text-white">
+                      <div className="w-5 h-5 bg-white rounded"></div>
+                    </Button>
+                    <Button variant="ghost" className="h-12 w-full bg-green-500 hover:bg-green-600 text-white">
+                      <div className="w-5 h-5 bg-white rounded"></div>
+                    </Button>
+                    <Button variant="ghost" className="h-12 w-full bg-blue-600 hover:bg-blue-700 text-white">
+                      <div className="w-5 h-5 bg-white rounded"></div>
+                    </Button>
+                    <Button variant="ghost" className="h-12 w-full bg-purple-500 hover:bg-purple-600 text-white">
+                      <div className="w-5 h-5 bg-white rounded"></div>
+                    </Button>
+                    <Button variant="ghost" className="h-12 w-full bg-black hover:bg-gray-800 text-white border border-gray-600">
+                      <div className="w-5 h-5 bg-white rounded"></div>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Virtual Background */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">Virtual background</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="aspect-video bg-gray-700 border-2 border-gray-500 rounded cursor-pointer hover:border-gray-400"></div>
+                    <div className="aspect-video bg-gradient-to-br from-blue-500 to-purple-600 rounded cursor-pointer hover:opacity-80"></div>
+                    <div className="aspect-video bg-gradient-to-br from-purple-500 to-pink-500 rounded cursor-pointer hover:opacity-80"></div>
+                    <div className="aspect-video bg-gradient-to-br from-orange-400 to-pink-400 rounded cursor-pointer hover:opacity-80"></div>
+                    <div className="aspect-video bg-gradient-to-br from-red-500 to-orange-500 rounded cursor-pointer hover:opacity-80"></div>
+                    <div className="aspect-video bg-gradient-to-br from-yellow-400 to-orange-500 rounded cursor-pointer hover:opacity-80"></div>
+                  </div>
+                  <Button variant="ghost" className="w-full mt-2 text-gray-400 hover:text-white">
+                    See all
+                  </Button>
+                </div>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
