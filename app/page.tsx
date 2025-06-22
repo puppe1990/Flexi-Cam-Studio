@@ -1052,8 +1052,8 @@ export default function CameraRecorder() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // Only show effect preview when effect crop mode is active (works during recording too)
-    if (!isEffectCropMode || videoEffect === ("none" as VideoEffect)) {
+    // Only show effect preview in effect crop mode and when not recording to reduce performance impact
+    if (!isEffectCropMode || videoEffect === ("none" as VideoEffect) || recordingState === "recording") {
       canvas.style.display = "none"
       return
     }
@@ -1070,6 +1070,7 @@ export default function CameraRecorder() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
+    // Effect crop mode - apply effect to selected area only
     // Use consistent coordinate calculation for video display area
     const videoArea = getVideoDisplayArea()
     
@@ -1174,15 +1175,18 @@ export default function CameraRecorder() {
     // Draw the processed area to the main canvas
     ctx.drawImage(tempCanvas, 0, 0, effectWidth, effectHeight, effectStartX, effectStartY, effectWidth, effectHeight)
 
-    // Continue animation (works during recording too)
-    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect)) {
-      previewEffectAnimationRef.current = requestAnimationFrame(updateEffectPreview)
+    // Continue animation with reduced frame rate for better performance
+    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect) && recordingState !== "recording") {
+      // Limit to ~15 FPS for preview to reduce CPU usage
+      setTimeout(() => {
+        previewEffectAnimationRef.current = requestAnimationFrame(updateEffectPreview)
+      }, 67) // ~15 FPS (1000ms / 15 ≈ 67ms)
     }
   }, [isEffectCropMode, videoEffect, effectIntensity, effectCropArea, isMirrored, recordingState, applyManualBlur])
 
   // Start/stop effect preview animation
   useEffect(() => {
-    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect)) {
+    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect) && recordingState !== "recording") {
       // Cancel any existing animation before starting a new one
       if (previewEffectAnimationRef.current) {
         cancelAnimationFrame(previewEffectAnimationRef.current)
@@ -1289,7 +1293,9 @@ export default function CameraRecorder() {
         // Draw the affected area back to the main canvas
         ctx.drawImage(tempCanvas, 0, 0, clampedWidth, clampedHeight, clampedX, clampedY, clampedWidth, clampedHeight)
       } else if (videoEffect !== ("none" as VideoEffect) && !isEffectCropMode) {
-        // Apply effect to entire video
+        // Apply effect to entire video - need to redraw the video with effect
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        
         if (videoEffect === "blur") {
           const blurAmount = effectIntensity * 2
           ctx.filter = `blur(${blurAmount}px)`
@@ -1302,26 +1308,37 @@ export default function CameraRecorder() {
           } else {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
           }
+          
+          // Reset filter for future draws
+          ctx.filter = 'none'
         } else if (videoEffect === "pixelate") {
-          const pixelSize = effectIntensity * 3
+          const pixelSize = Math.max(1, effectIntensity * 3)
           const scaledWidth = Math.max(1, Math.floor(canvas.width / pixelSize))
           const scaledHeight = Math.max(1, Math.floor(canvas.height / pixelSize))
 
-          ctx.imageSmoothingEnabled = false
+          // Create a temporary smaller canvas for pixelation
+          const pixelCanvas = document.createElement("canvas")
+          const pixelCtx = pixelCanvas.getContext("2d")
+          if (!pixelCtx) return
 
+          pixelCanvas.width = scaledWidth
+          pixelCanvas.height = scaledHeight
+          pixelCtx.imageSmoothingEnabled = false
+
+          // Draw video to small canvas
           if (isMirrored) {
-            ctx.save()
-            ctx.scale(-1, 1)
-            ctx.drawImage(video, -scaledWidth, 0, scaledWidth, scaledHeight)
-            ctx.restore()
+            pixelCtx.save()
+            pixelCtx.scale(-1, 1)
+            pixelCtx.drawImage(video, -scaledWidth, 0, scaledWidth, scaledHeight)
+            pixelCtx.restore()
           } else {
-            ctx.drawImage(video, 0, 0, scaledWidth, scaledHeight)
+            pixelCtx.drawImage(video, 0, 0, scaledWidth, scaledHeight)
           }
 
-          const imageData = ctx.getImageData(0, 0, scaledWidth, scaledHeight)
-          ctx.clearRect(0, 0, canvas.width, canvas.height)
-          ctx.putImageData(imageData, 0, 0)
-          ctx.drawImage(canvas, 0, 0, scaledWidth, scaledHeight, 0, 0, canvas.width, canvas.height)
+          // Draw the small canvas back to main canvas at full size for pixelated effect
+          ctx.imageSmoothingEnabled = false
+          ctx.drawImage(pixelCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, canvas.width, canvas.height)
+          ctx.imageSmoothingEnabled = true
         }
       }
 
@@ -1606,15 +1623,15 @@ export default function CameraRecorder() {
   const applyEffectToScreenshot = useCallback((ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, mode: "crop" | "full") => {
     if (!isEffectCropMode && mode === "full") {
       // Apply effect to entire screenshot when not in effect crop mode
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      
       if (videoEffect === "blur") {
         const blurAmount = effectIntensity * 2
         try {
           ctx.filter = `blur(${blurAmount}px)`
           ctx.drawImage(canvas, 0, 0)
+          ctx.filter = 'none'
         } catch {
           // Fallback to manual blur
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
           const blurredData = applyManualBlur(imageData, Math.ceil(blurAmount / 2))
           ctx.putImageData(blurredData, 0, 0)
         }
@@ -1623,21 +1640,31 @@ export default function CameraRecorder() {
         const scaledWidth = Math.max(1, Math.floor(canvas.width / pixelSize))
         const scaledHeight = Math.max(1, Math.floor(canvas.height / pixelSize))
 
+        // Create a temporary canvas to hold the original image
+        const originalCanvas = document.createElement("canvas")
+        const originalCtx = originalCanvas.getContext("2d")
+        if (!originalCtx) return
+        
+        originalCanvas.width = canvas.width
+        originalCanvas.height = canvas.height
+        originalCtx.drawImage(canvas, 0, 0)
+
+        // Create pixelation canvas
         const pixelCanvas = document.createElement("canvas")
         const pixelCtx = pixelCanvas.getContext("2d")
         if (pixelCtx) {
           pixelCanvas.width = scaledWidth
           pixelCanvas.height = scaledHeight
           pixelCtx.imageSmoothingEnabled = false
-          pixelCtx.putImageData(imageData, 0, 0)
           
-          // Draw at reduced size
-          pixelCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, scaledWidth, scaledHeight)
+          // Draw original to small canvas
+          pixelCtx.drawImage(originalCanvas, 0, 0, canvas.width, canvas.height, 0, 0, scaledWidth, scaledHeight)
           
-          // Draw back at full size
+          // Clear main canvas and draw pixelated version back at full size
           ctx.imageSmoothingEnabled = false
           ctx.clearRect(0, 0, canvas.width, canvas.height)
           ctx.drawImage(pixelCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, canvas.width, canvas.height)
+          ctx.imageSmoothingEnabled = true
         }
       }
       return
@@ -2009,7 +2036,7 @@ export default function CameraRecorder() {
       }
 
       // Apply effects if enabled
-      if (isEffectCropMode && videoEffect !== ("none" as VideoEffect)) {
+      if (videoEffect !== ("none" as VideoEffect)) {
         applyEffectToScreenshot(ctx, canvas, isCropMode ? "crop" : "full")
       }
 
@@ -3121,9 +3148,7 @@ export default function CameraRecorder() {
                       filter:
                         videoEffect === "blur" && !isEffectCropMode
                           ? `blur(${effectIntensity * 2}px)`
-                          : videoEffect === "pixelate" && !isEffectCropMode
-                            ? `contrast(1.2) saturate(1.1)`
-                            : "none",
+                          : "none",
                       imageRendering: videoEffect === "pixelate" && !isEffectCropMode ? "pixelated" : "auto",
                     }}
                     autoPlay
