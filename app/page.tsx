@@ -3354,20 +3354,21 @@ export default function CameraRecorder() {
                   return null // Don't render light if video dimensions are invalid
                 }
                 
-                // Special handling for 9:16 (vertical) videos
+                // Special handling for specific aspect ratios
                 const isVertical = aspectRatio === "9:16"
+                const isSquare = aspectRatio === "1:1"
                 const screenWidth = window.innerWidth
                 const screenHeight = window.innerHeight
                 
-                // For vertical videos, ensure proper centering calculations
+                // For vertical and square videos, ensure proper centering calculations
                 let adjustedVideoArea = videoArea
-                if (isVertical) {
-                  // Force recalculation for vertical videos to ensure proper centering
+                if (isVertical || isSquare) {
+                  // Force recalculation for special aspect ratios to ensure proper centering
                   const videoWidth = videoArea.displayedVideoWidth
                   const videoHeight = videoArea.displayedVideoHeight
                   
-                  // Center the video horizontally
-                  const centeredOffsetX = (screenWidth - videoWidth) / 2
+                  // Center the video both horizontally and vertically
+                  const centeredOffsetX = Math.max(0, (screenWidth - videoWidth) / 2)
                   const centeredOffsetY = Math.max(0, (screenHeight - videoHeight) / 2)
                   
                   adjustedVideoArea = {
@@ -3379,11 +3380,11 @@ export default function CameraRecorder() {
                   }
                 }
                 
-                // For 9:16, create full-screen light around video (no overlay on video)
-                if (isVertical) {
+                // For 9:16 and 1:1, create full-screen light around video (no overlay on video)
+                if (isVertical || isSquare) {
                   return (
                     <div 
-                      key={`light-vertical-${adjustedVideoArea.displayedVideoWidth}-${adjustedVideoArea.displayedVideoHeight}`}
+                      key={`light-${aspectRatio}-${adjustedVideoArea.displayedVideoWidth}-${adjustedVideoArea.displayedVideoHeight}`}
                       className="absolute inset-0 pointer-events-none transition-opacity duration-300"
                       style={{ zIndex: 10 }}
                     >
@@ -3394,7 +3395,7 @@ export default function CameraRecorder() {
                           left: 0,
                           top: 0,
                           width: `${screenWidth}px`,
-                          height: `${adjustedVideoArea.videoOffsetY}px`,
+                          height: `${Math.max(0, adjustedVideoArea.videoOffsetY)}px`,
                           opacity: lightIntensity / 100
                         }}
                       />
@@ -3406,7 +3407,7 @@ export default function CameraRecorder() {
                           left: 0,
                           top: `${adjustedVideoArea.videoOffsetY + adjustedVideoArea.displayedVideoHeight}px`,
                           width: `${screenWidth}px`,
-                          height: `${screenHeight - (adjustedVideoArea.videoOffsetY + adjustedVideoArea.displayedVideoHeight)}px`,
+                          height: `${Math.max(0, screenHeight - (adjustedVideoArea.videoOffsetY + adjustedVideoArea.displayedVideoHeight))}px`,
                           opacity: lightIntensity / 100
                         }}
                       />
@@ -3417,7 +3418,7 @@ export default function CameraRecorder() {
                         style={{
                           left: 0,
                           top: `${adjustedVideoArea.videoOffsetY}px`,
-                          width: `${adjustedVideoArea.videoOffsetX}px`,
+                          width: `${Math.max(0, adjustedVideoArea.videoOffsetX)}px`,
                           height: `${adjustedVideoArea.displayedVideoHeight}px`,
                           opacity: lightIntensity / 100
                         }}
@@ -3429,7 +3430,7 @@ export default function CameraRecorder() {
                         style={{
                           left: `${adjustedVideoArea.videoOffsetX + adjustedVideoArea.displayedVideoWidth}px`,
                           top: `${adjustedVideoArea.videoOffsetY}px`,
-                          width: `${screenWidth - (adjustedVideoArea.videoOffsetX + adjustedVideoArea.displayedVideoWidth)}px`,
+                          width: `${Math.max(0, screenWidth - (adjustedVideoArea.videoOffsetX + adjustedVideoArea.displayedVideoWidth))}px`,
                           height: `${adjustedVideoArea.displayedVideoHeight}px`,
                           opacity: lightIntensity / 100
                         }}
@@ -3438,57 +3439,111 @@ export default function CameraRecorder() {
                   )
                 }
                 
-                // For other aspect ratios, use ring light approach
+                // For other aspect ratios, use simplified full-area approach with video cutout
+                const videoLeft = adjustedVideoArea.videoOffsetX
+                const videoTop = adjustedVideoArea.videoOffsetY
+                const videoWidth = adjustedVideoArea.displayedVideoWidth
+                const videoHeight = adjustedVideoArea.displayedVideoHeight
+                
                 return (
                   <div 
-                    key={`light-${aspectRatio}-${adjustedVideoArea.displayedVideoWidth}-${adjustedVideoArea.displayedVideoHeight}`}
+                    key={`light-${aspectRatio}-${videoWidth}-${videoHeight}`}
                     className="absolute inset-0 pointer-events-none transition-opacity duration-300"
                     style={{ zIndex: 10 }} // Lower z-index so controls can overlay
                   >
-                    {/* Top light area */}
+                    {/* Top area - full width above video */}
                     <div 
                       className="absolute bg-white transition-all duration-300"
                       style={{
-                        left: `${Math.max(0, adjustedVideoArea.videoOffsetX - lightBorderWidth)}px`,
-                        top: `${Math.max(0, adjustedVideoArea.videoOffsetY - lightBorderWidth)}px`,
-                        width: `${Math.min(adjustedVideoArea.displayedVideoWidth + (lightBorderWidth * 2), screenWidth)}px`,
+                        left: 0,
+                        top: 0,
+                        width: `${screenWidth}px`,
+                        height: `${Math.max(0, videoTop - lightBorderWidth)}px`,
+                        opacity: lightIntensity / 100
+                      }}
+                    />
+                    
+                    {/* Bottom area - full width below video */}
+                    <div 
+                      className="absolute bg-white transition-all duration-300"
+                      style={{
+                        left: 0,
+                        top: `${videoTop + videoHeight + lightBorderWidth}px`,
+                        width: `${screenWidth}px`,
+                        height: `${Math.max(0, screenHeight - (videoTop + videoHeight + lightBorderWidth))}px`,
+                        opacity: lightIntensity / 100
+                      }}
+                    />
+                    
+                    {/* Left area - full height beside video */}
+                    <div 
+                      className="absolute bg-white transition-all duration-300"
+                      style={{
+                        left: 0,
+                        top: 0,
+                        width: `${Math.max(0, videoLeft - lightBorderWidth)}px`,
+                        height: `${screenHeight}px`,
+                        opacity: lightIntensity / 100
+                      }}
+                    />
+                    
+                    {/* Right area - full height beside video */}
+                    <div 
+                      className="absolute bg-white transition-all duration-300"
+                      style={{
+                        left: `${videoLeft + videoWidth + lightBorderWidth}px`,
+                        top: 0,
+                        width: `${Math.max(0, screenWidth - (videoLeft + videoWidth + lightBorderWidth))}px`,
+                        height: `${screenHeight}px`,
+                        opacity: lightIntensity / 100
+                      }}
+                    />
+                    
+                    {/* Ring areas around video */}
+                    {/* Top ring */}
+                    <div 
+                      className="absolute bg-white transition-all duration-300"
+                      style={{
+                        left: `${Math.max(0, videoLeft - lightBorderWidth)}px`,
+                        top: `${Math.max(0, videoTop - lightBorderWidth)}px`,
+                        width: `${videoWidth + (lightBorderWidth * 2)}px`,
                         height: `${lightBorderWidth}px`,
                         opacity: lightIntensity / 100
                       }}
                     />
                     
-                    {/* Bottom light area */}
+                    {/* Bottom ring */}
                     <div 
                       className="absolute bg-white transition-all duration-300"
                       style={{
-                        left: `${Math.max(0, adjustedVideoArea.videoOffsetX - lightBorderWidth)}px`,
-                        top: `${Math.min(adjustedVideoArea.videoOffsetY + adjustedVideoArea.displayedVideoHeight, screenHeight - lightBorderWidth)}px`,
-                        width: `${Math.min(adjustedVideoArea.displayedVideoWidth + (lightBorderWidth * 2), screenWidth)}px`,
+                        left: `${Math.max(0, videoLeft - lightBorderWidth)}px`,
+                        top: `${videoTop + videoHeight}px`,
+                        width: `${videoWidth + (lightBorderWidth * 2)}px`,
                         height: `${lightBorderWidth}px`,
                         opacity: lightIntensity / 100
                       }}
                     />
                     
-                    {/* Left light area */}
+                    {/* Left ring */}
                     <div 
                       className="absolute bg-white transition-all duration-300"
                       style={{
-                        left: `${Math.max(0, adjustedVideoArea.videoOffsetX - lightBorderWidth)}px`,
-                        top: `${adjustedVideoArea.videoOffsetY}px`,
-                        width: `${Math.min(lightBorderWidth, adjustedVideoArea.videoOffsetX)}px`,
-                        height: `${adjustedVideoArea.displayedVideoHeight}px`,
+                        left: `${Math.max(0, videoLeft - lightBorderWidth)}px`,
+                        top: `${videoTop}px`,
+                        width: `${lightBorderWidth}px`,
+                        height: `${videoHeight}px`,
                         opacity: lightIntensity / 100
                       }}
                     />
                     
-                    {/* Right light area */}
+                    {/* Right ring */}
                     <div 
                       className="absolute bg-white transition-all duration-300"
                       style={{
-                        left: `${Math.min(adjustedVideoArea.videoOffsetX + adjustedVideoArea.displayedVideoWidth, screenWidth - lightBorderWidth)}px`,
-                        top: `${adjustedVideoArea.videoOffsetY}px`,
-                        width: `${Math.min(lightBorderWidth, screenWidth - (adjustedVideoArea.videoOffsetX + adjustedVideoArea.displayedVideoWidth))}px`,
-                        height: `${adjustedVideoArea.displayedVideoHeight}px`,
+                        left: `${videoLeft + videoWidth}px`,
+                        top: `${videoTop}px`,
+                        width: `${lightBorderWidth}px`,
+                        height: `${videoHeight}px`,
                         opacity: lightIntensity / 100
                       }}
                     />
@@ -4220,7 +4275,7 @@ export default function CameraRecorder() {
                     <span className="font-medium">Light Mode Active ({lightIntensity}%)</span>
                   </div>
                   <p>
-                    Professional illumination in fullscreen mode: Ring light for landscape/square videos, full-screen light for 9:16 vertical videos • 
+                    Professional illumination in fullscreen mode: Ring light for 16:9/4:3 videos, full-screen light for 9:16 vertical and 1:1 square videos • 
                     Controls overlay on top of light as needed • Adjust intensity with +/- controls
                   </p>
                 </div>
@@ -4236,7 +4291,7 @@ export default function CameraRecorder() {
                     <span className="font-medium">Light Mode Available in Fullscreen</span>
                   </div>
                   <p>
-                    Press F to enter fullscreen mode and access professional light: Ring light for landscape/square videos, full-screen illumination for 9:16 vertical • 
+                    Press F to enter fullscreen mode and access professional light: Ring light for 16:9/4:3 videos, full-screen illumination for 9:16 vertical and 1:1 square • 
                     Use L key or controls to toggle light mode once in fullscreen • Controls will overlay on light when needed
                   </p>
                 </div>
@@ -4801,7 +4856,7 @@ export default function CameraRecorder() {
               </div>
               <div className="flex items-start gap-2">
                 <span className="font-semibold text-blue-600">3.1.</span>
-                <span>Use Light Mode (fullscreen only): Ring light for landscape/square videos, full-screen illumination for 9:16 vertical videos - controls overlay on light when needed</span>
+                <span>Use Light Mode (fullscreen only): Ring light for 16:9/4:3 videos, full-screen illumination for 9:16 vertical and 1:1 square videos - controls overlay on light when needed</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="font-semibold text-blue-600">4.</span>
@@ -4940,7 +4995,7 @@ export default function CameraRecorder() {
                 <p className="text-gray-600 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200">💡 Shortcuts work when not typing in input fields</p>
                 <p className="text-gray-600 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-3 border border-purple-200">🖱️ When zoomed in, drag to pan the video</p>
                 <p className="text-gray-600 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-3 border border-violet-200">🎨 Purple area shows where effects will be applied</p>
-                <p className="text-gray-600 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-3 border border-yellow-200">💡 Light mode: ring for landscape, full-screen for 9:16 (fullscreen only)</p>
+                <p className="text-gray-600 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-3 border border-yellow-200">💡 Light mode: ring for 16:9/4:3, full-screen for 9:16/1:1 (fullscreen only)</p>
               </div>
             </div>
           </CardContent>
