@@ -1,6 +1,7 @@
 # Flexi Cam Studio
 
 A powerful web-based camera recording and editing application built with Next.js and React. This application provides professional-grade video recording capabilities directly in your browser, with advanced editing features and effects.
+<img width="1705" alt="Screenshot 2025-06-22 at 12 02 48" src="https://github.com/user-attachments/assets/ab6ec121-e768-41b7-ba3f-0d2c7368d835" />
 
 ## Features
 
