@@ -3379,13 +3379,66 @@ export default function CameraRecorder() {
                   }
                 }
                 
-                console.log(`🔍 Light Debug (${aspectRatio}):`, {
-                  originalArea: videoArea,
-                  adjustedArea: adjustedVideoArea,
-                  isVertical,
-                  screen: { width: screenWidth, height: screenHeight }
-                })
+                // For 9:16, create full-screen light around video (no overlay on video)
+                if (isVertical) {
+                  return (
+                    <div 
+                      key={`light-vertical-${adjustedVideoArea.displayedVideoWidth}-${adjustedVideoArea.displayedVideoHeight}`}
+                      className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+                      style={{ zIndex: 10 }}
+                    >
+                      {/* Top area - full width */}
+                      <div 
+                        className="absolute bg-white transition-all duration-300"
+                        style={{
+                          left: 0,
+                          top: 0,
+                          width: `${screenWidth}px`,
+                          height: `${adjustedVideoArea.videoOffsetY}px`,
+                          opacity: lightIntensity / 100
+                        }}
+                      />
+                      
+                      {/* Bottom area - full width */}
+                      <div 
+                        className="absolute bg-white transition-all duration-300"
+                        style={{
+                          left: 0,
+                          top: `${adjustedVideoArea.videoOffsetY + adjustedVideoArea.displayedVideoHeight}px`,
+                          width: `${screenWidth}px`,
+                          height: `${screenHeight - (adjustedVideoArea.videoOffsetY + adjustedVideoArea.displayedVideoHeight)}px`,
+                          opacity: lightIntensity / 100
+                        }}
+                      />
+                      
+                      {/* Left area - next to video */}
+                      <div 
+                        className="absolute bg-white transition-all duration-300"
+                        style={{
+                          left: 0,
+                          top: `${adjustedVideoArea.videoOffsetY}px`,
+                          width: `${adjustedVideoArea.videoOffsetX}px`,
+                          height: `${adjustedVideoArea.displayedVideoHeight}px`,
+                          opacity: lightIntensity / 100
+                        }}
+                      />
+                      
+                      {/* Right area - next to video */}
+                      <div 
+                        className="absolute bg-white transition-all duration-300"
+                        style={{
+                          left: `${adjustedVideoArea.videoOffsetX + adjustedVideoArea.displayedVideoWidth}px`,
+                          top: `${adjustedVideoArea.videoOffsetY}px`,
+                          width: `${screenWidth - (adjustedVideoArea.videoOffsetX + adjustedVideoArea.displayedVideoWidth)}px`,
+                          height: `${adjustedVideoArea.displayedVideoHeight}px`,
+                          opacity: lightIntensity / 100
+                        }}
+                      />
+                    </div>
+                  )
+                }
                 
+                // For other aspect ratios, use ring light approach
                 return (
                   <div 
                     key={`light-${aspectRatio}-${adjustedVideoArea.displayedVideoWidth}-${adjustedVideoArea.displayedVideoHeight}`}
@@ -4167,7 +4220,7 @@ export default function CameraRecorder() {
                     <span className="font-medium">Light Mode Active ({lightIntensity}%)</span>
                   </div>
                   <p>
-                    Complete light ring around the camera provides professional illumination in fullscreen mode • 
+                    Professional illumination in fullscreen mode: Ring light for landscape/square videos, full-screen light for 9:16 vertical videos • 
                     Controls overlay on top of light as needed • Adjust intensity with +/- controls
                   </p>
                 </div>
@@ -4183,7 +4236,7 @@ export default function CameraRecorder() {
                     <span className="font-medium">Light Mode Available in Fullscreen</span>
                   </div>
                   <p>
-                    Press F to enter fullscreen mode and access complete light ring around camera for professional video illumination • 
+                    Press F to enter fullscreen mode and access professional light: Ring light for landscape/square videos, full-screen illumination for 9:16 vertical • 
                     Use L key or controls to toggle light mode once in fullscreen • Controls will overlay on light when needed
                   </p>
                 </div>
@@ -4748,7 +4801,7 @@ export default function CameraRecorder() {
               </div>
               <div className="flex items-start gap-2">
                 <span className="font-semibold text-blue-600">3.1.</span>
-                <span>Use Light Mode (fullscreen only) to create a complete bright light ring around the camera - controls overlay on light when needed</span>
+                <span>Use Light Mode (fullscreen only): Ring light for landscape/square videos, full-screen illumination for 9:16 vertical videos - controls overlay on light when needed</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="font-semibold text-blue-600">4.</span>
@@ -4887,7 +4940,7 @@ export default function CameraRecorder() {
                 <p className="text-gray-600 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200">💡 Shortcuts work when not typing in input fields</p>
                 <p className="text-gray-600 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-3 border border-purple-200">🖱️ When zoomed in, drag to pan the video</p>
                 <p className="text-gray-600 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-3 border border-violet-200">🎨 Purple area shows where effects will be applied</p>
-                <p className="text-gray-600 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-3 border border-yellow-200">💡 Light mode: complete ring, controls overlay (fullscreen only)</p>
+                <p className="text-gray-600 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-3 border border-yellow-200">💡 Light mode: ring for landscape, full-screen for 9:16 (fullscreen only)</p>
               </div>
             </div>
           </CardContent>
