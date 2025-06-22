@@ -115,6 +115,10 @@ export default function CameraRecorder() {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false)
   const [selectedScreenshotIndex, setSelectedScreenshotIndex] = useState(0)
 
+  // Light mode functionality
+  const [isLightMode, setIsLightMode] = useState(false)
+  const [lightIntensity, setLightIntensity] = useState(100) // 0-100 percentage
+
   // Tab management
   const [activeTab, setActiveTab] = useState("camera")
 
@@ -1355,6 +1359,15 @@ export default function CameraRecorder() {
     }
   }, [isEffectCropMode])
 
+  // Light mode controls
+  const toggleLightMode = useCallback(() => {
+    setIsLightMode((prev) => !prev)
+  }, [])
+
+  const adjustLightIntensity = useCallback((intensity: number) => {
+    setLightIntensity(Math.max(10, Math.min(100, intensity)))
+  }, [])
+
 
 
 
@@ -2438,6 +2451,19 @@ export default function CameraRecorder() {
     }
   }, [isCropMode, isEffectCropMode])
 
+  // Force light mode recalculation when aspect ratio changes
+  useEffect(() => {
+    if (isLightMode && isFullscreen) {
+      // Add a small delay to ensure video layout has adjusted to new aspect ratio
+      const timeoutId = setTimeout(() => {
+        // Force re-render by updating a state that doesn't affect the video
+        setVideoContainerSize(prev => ({ ...prev }))
+      }, 150)
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [aspectRatio, isLightMode, isFullscreen])
+
   // Handle fullscreen change events
   const handleFullscreenChange = useCallback(() => {
     const wasFullscreen = isFullscreen
@@ -2445,11 +2471,16 @@ export default function CameraRecorder() {
     
     setIsFullscreen(nowFullscreen)
     
+    // Turn off light mode when exiting fullscreen (since it only works in fullscreen)
+    if (wasFullscreen && !nowFullscreen && isLightMode) {
+      setIsLightMode(false)
+    }
+    
     // If fullscreen state changed and crop modes are active, recalculate positions
     if (wasFullscreen !== nowFullscreen) {
       recalculateCropAreas()
     }
-  }, [isFullscreen, recalculateCropAreas])
+  }, [isFullscreen, isLightMode, recalculateCropAreas])
 
   // Format time display
   const formatTime = (seconds: number) => {
@@ -2669,7 +2700,7 @@ export default function CameraRecorder() {
       }
 
       // Prevent default behavior for our shortcuts
-      const shortcuts = ["KeyC", "KeyS", "KeyR", "Space", "Equal", "Minus", "Digit0"]
+      const shortcuts = ["KeyC", "KeyS", "KeyR", "Space", "Equal", "Minus", "Digit0", "KeyM", "KeyL"]
       if (shortcuts.includes(event.code)) {
         event.preventDefault()
       }
@@ -2762,6 +2793,13 @@ export default function CameraRecorder() {
             toggleMirror()
           }
           break
+
+        case "KeyL":
+          // L key - Toggle light mode (fullscreen only)
+          if (recordingState === "idle" && isFullscreen) {
+            toggleLightMode()
+          }
+          break
       }
     }
 
@@ -2788,6 +2826,7 @@ export default function CameraRecorder() {
     zoomOut,
     resetZoom,
     toggleMirror,
+    toggleLightMode,
     isScreenshotModalOpen,
     navigateScreenshot,
     closeScreenshotModal,
@@ -2838,6 +2877,11 @@ export default function CameraRecorder() {
               <Badge variant="outline" className="bg-gradient-to-r from-violet-50 to-purple-50 border-violet-300 text-violet-700 shadow-sm">
                 {videoEffect === "blur" ? "Blur" : "Pixelate"} {effectIntensity}
                 {isEffectCropMode && " (Area)"}
+              </Badge>
+            )}
+            {isLightMode && (
+              <Badge variant="outline" className="bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-300 text-yellow-700 shadow-sm">
+                Light Mode {lightIntensity}%
               </Badge>
             )}
           </div>
@@ -3254,6 +3298,23 @@ export default function CameraRecorder() {
                       <ResetZoom className="w-4 h-4" />
                     </Button>
                   )}
+                  
+                  {/* Light Mode Controls - Disabled in Normal Mode */}
+                  <div className="border-t border-white/20 pt-2 mt-2">
+                    <Button
+                      onClick={() => {}} // Disabled - light mode only works in fullscreen
+                      variant="outline"
+                      size="sm"
+                      disabled={true}
+                      className="bg-gray-500/20 border-gray-500/50 text-gray-400 cursor-not-allowed"
+                      title="Light Mode (Fullscreen Only)"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                    </Button>
+                    <div className="text-gray-400 text-xs text-center mt-1">Fullscreen Only</div>
+                  </div>
                 </div>
               )}
 
@@ -3261,6 +3322,7 @@ export default function CameraRecorder() {
               <button
                 onClick={toggleFullscreen}
                 className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all duration-200 backdrop-blur-sm"
+                style={{ zIndex: 20 }} // Higher z-index to appear above light
                 title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
               >
                 {isFullscreen ? (
@@ -3281,6 +3343,105 @@ export default function CameraRecorder() {
 
               {/* Flash Effect */}
               {showFlash && <div className="absolute inset-0 bg-white opacity-80 pointer-events-none animate-pulse" />}
+
+              {/* Light Mode - Complete Ring Around Camera in Fullscreen */}
+              {isLightMode && isFullscreen && (() => {
+                const videoArea = getVideoDisplayArea()
+                const lightBorderWidth = 80 // Width of light ring around video
+                
+                // Validate video area calculations to prevent chaos during aspect ratio changes
+                if (!videoArea || videoArea.displayedVideoWidth <= 0 || videoArea.displayedVideoHeight <= 0) {
+                  return null // Don't render light if video dimensions are invalid
+                }
+                
+                // Special handling for 9:16 (vertical) videos
+                const isVertical = aspectRatio === "9:16"
+                const screenWidth = window.innerWidth
+                const screenHeight = window.innerHeight
+                
+                // For vertical videos, ensure proper centering calculations
+                let adjustedVideoArea = videoArea
+                if (isVertical) {
+                  // Force recalculation for vertical videos to ensure proper centering
+                  const videoWidth = videoArea.displayedVideoWidth
+                  const videoHeight = videoArea.displayedVideoHeight
+                  
+                  // Center the video horizontally
+                  const centeredOffsetX = (screenWidth - videoWidth) / 2
+                  const centeredOffsetY = Math.max(0, (screenHeight - videoHeight) / 2)
+                  
+                  adjustedVideoArea = {
+                    ...videoArea,
+                    videoOffsetX: centeredOffsetX,
+                    videoOffsetY: centeredOffsetY,
+                    displayedVideoWidth: videoWidth,
+                    displayedVideoHeight: Math.min(videoHeight, screenHeight)
+                  }
+                }
+                
+                console.log(`🔍 Light Debug (${aspectRatio}):`, {
+                  originalArea: videoArea,
+                  adjustedArea: adjustedVideoArea,
+                  isVertical,
+                  screen: { width: screenWidth, height: screenHeight }
+                })
+                
+                return (
+                  <div 
+                    key={`light-${aspectRatio}-${adjustedVideoArea.displayedVideoWidth}-${adjustedVideoArea.displayedVideoHeight}`}
+                    className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+                    style={{ zIndex: 10 }} // Lower z-index so controls can overlay
+                  >
+                    {/* Top light area */}
+                    <div 
+                      className="absolute bg-white transition-all duration-300"
+                      style={{
+                        left: `${Math.max(0, adjustedVideoArea.videoOffsetX - lightBorderWidth)}px`,
+                        top: `${Math.max(0, adjustedVideoArea.videoOffsetY - lightBorderWidth)}px`,
+                        width: `${Math.min(adjustedVideoArea.displayedVideoWidth + (lightBorderWidth * 2), screenWidth)}px`,
+                        height: `${lightBorderWidth}px`,
+                        opacity: lightIntensity / 100
+                      }}
+                    />
+                    
+                    {/* Bottom light area */}
+                    <div 
+                      className="absolute bg-white transition-all duration-300"
+                      style={{
+                        left: `${Math.max(0, adjustedVideoArea.videoOffsetX - lightBorderWidth)}px`,
+                        top: `${Math.min(adjustedVideoArea.videoOffsetY + adjustedVideoArea.displayedVideoHeight, screenHeight - lightBorderWidth)}px`,
+                        width: `${Math.min(adjustedVideoArea.displayedVideoWidth + (lightBorderWidth * 2), screenWidth)}px`,
+                        height: `${lightBorderWidth}px`,
+                        opacity: lightIntensity / 100
+                      }}
+                    />
+                    
+                    {/* Left light area */}
+                    <div 
+                      className="absolute bg-white transition-all duration-300"
+                      style={{
+                        left: `${Math.max(0, adjustedVideoArea.videoOffsetX - lightBorderWidth)}px`,
+                        top: `${adjustedVideoArea.videoOffsetY}px`,
+                        width: `${Math.min(lightBorderWidth, adjustedVideoArea.videoOffsetX)}px`,
+                        height: `${adjustedVideoArea.displayedVideoHeight}px`,
+                        opacity: lightIntensity / 100
+                      }}
+                    />
+                    
+                    {/* Right light area */}
+                    <div 
+                      className="absolute bg-white transition-all duration-300"
+                      style={{
+                        left: `${Math.min(adjustedVideoArea.videoOffsetX + adjustedVideoArea.displayedVideoWidth, screenWidth - lightBorderWidth)}px`,
+                        top: `${adjustedVideoArea.videoOffsetY}px`,
+                        width: `${Math.min(lightBorderWidth, screenWidth - (adjustedVideoArea.videoOffsetX + adjustedVideoArea.displayedVideoWidth))}px`,
+                        height: `${adjustedVideoArea.displayedVideoHeight}px`,
+                        opacity: lightIntensity / 100
+                      }}
+                    />
+                  </div>
+                )
+              })()}
 
               {/* Recording Overlay */}
               {recordingState === "recording" && (
@@ -3410,6 +3571,7 @@ export default function CameraRecorder() {
                       ? "left-1/2 transform -translate-x-1/2 w-80" // Centered for vertical
                       : "left-1/2 transform -translate-x-1/2" // Centered for all
                   } flex flex-col items-center gap-4`}
+                  style={{ zIndex: 20 }} // Higher z-index to appear above light
                 >
                   {/* Main Controls Row */}
                   <div className="flex items-center gap-4 bg-black/70 backdrop-blur-sm rounded-full px-6 py-3">
@@ -3567,6 +3729,50 @@ export default function CameraRecorder() {
 
                       <div className="w-px h-4 bg-white/20" />
 
+                      {/* Light Mode Controls */}
+                      <div className="flex items-center gap-1">
+                        <span className="text-white text-xs font-medium mr-1">Light:</span>
+                        <button
+                          onClick={toggleLightMode}
+                          className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                            isLightMode
+                              ? "bg-yellow-500 text-white"
+                              : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                          }`}
+                        >
+                          {isLightMode ? "On" : "Off"}
+                        </button>
+                        {isLightMode && (
+                          <>
+                            <button
+                              onClick={() => adjustLightIntensity(lightIntensity - 20)}
+                              disabled={lightIntensity <= 10}
+                              className={`px-1 py-1 rounded text-xs font-medium transition-all ${
+                                lightIntensity <= 10
+                                  ? "bg-white/5 text-white/30 cursor-not-allowed"
+                                  : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                              }`}
+                            >
+                              -
+                            </button>
+                            <span className="text-white text-xs font-mono w-10 text-center">{lightIntensity}%</span>
+                            <button
+                              onClick={() => adjustLightIntensity(lightIntensity + 20)}
+                              disabled={lightIntensity >= 100}
+                              className={`px-1 py-1 rounded text-xs font-medium transition-all ${
+                                lightIntensity >= 100
+                                  ? "bg-white/5 text-white/30 cursor-not-allowed"
+                                  : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                              }`}
+                            >
+                              +
+                            </button>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="w-px h-4 bg-white/20" />
+
                       {/* Effect Controls */}
                       <div className="flex items-center gap-1">
                         <span className="text-white text-xs font-medium mr-1">Effect:</span>
@@ -3682,6 +3888,7 @@ export default function CameraRecorder() {
                       ? "left-1/2 transform -translate-x-1/2 w-80" // Centered for vertical
                       : "left-6 right-6" // Full width for landscape/square
                   }`}
+                  style={{ zIndex: 20 }} // Higher z-index to appear above light
                 >
                   <Slider
                     value={[currentTime]}
@@ -3824,6 +4031,21 @@ export default function CameraRecorder() {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Light Mode - Fullscreen Only */}
+                    <div className="flex items-center gap-2">
+                      <label className="font-medium text-slate-500">Light:</label>
+                      <Button
+                        onClick={() => {}} // Disabled - light mode only works in fullscreen
+                        variant="outline"
+                        size="sm"
+                        disabled={true}
+                        className="h-6 px-2 text-xs bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
+                        title="Light Mode (Fullscreen Only)"
+                      >
+                        Fullscreen Only
+                      </Button>
+                    </div>
                   </div>
                 )}
 
@@ -3932,6 +4154,38 @@ export default function CameraRecorder() {
                     <span className="font-medium">Mirror Mode Active</span>
                   </div>
                   <p>Video is horizontally flipped • Perfect for selfie-style recording</p>
+                </div>
+              )}
+
+              {/* Light Mode Info */}
+              {recordingState === "idle" && isLightMode && isFullscreen && (
+                <div className="text-center text-sm text-slate-600 bg-yellow-50 rounded-lg p-3">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <span className="font-medium">Light Mode Active ({lightIntensity}%)</span>
+                  </div>
+                  <p>
+                    Complete light ring around the camera provides professional illumination in fullscreen mode • 
+                    Controls overlay on top of light as needed • Adjust intensity with +/- controls
+                  </p>
+                </div>
+              )}
+
+              {/* Light Mode Disabled Info */}
+              {recordingState === "idle" && !isFullscreen && (
+                <div className="text-center text-sm text-slate-600 bg-blue-50 rounded-lg p-3">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="font-medium">Light Mode Available in Fullscreen</span>
+                  </div>
+                  <p>
+                    Press F to enter fullscreen mode and access complete light ring around camera for professional video illumination • 
+                    Use L key or controls to toggle light mode once in fullscreen • Controls will overlay on light when needed
+                  </p>
                 </div>
               )}
 
@@ -4493,6 +4747,10 @@ export default function CameraRecorder() {
                 <span>Toggle mirror mode to flip the video horizontally (useful for selfie-style recording)</span>
               </div>
               <div className="flex items-start gap-2">
+                <span className="font-semibold text-blue-600">3.1.</span>
+                <span>Use Light Mode (fullscreen only) to create a complete bright light ring around the camera - controls overlay on light when needed</span>
+              </div>
+              <div className="flex items-start gap-2">
                 <span className="font-semibold text-blue-600">4.</span>
                 <span>
                   Apply visual effects like blur or pixelation for privacy or artistic purposes - choose to apply to
@@ -4610,6 +4868,10 @@ export default function CameraRecorder() {
                   <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">M</kbd>
                 </div>
                 <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                  <span className="font-medium text-gray-700">Toggle Light Mode (Fullscreen)</span>
+                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">L</kbd>
+                </div>
+                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
                   <span className="font-medium text-gray-700">Exit Modes/Fullscreen</span>
                   <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">Esc</kbd>
                 </div>
@@ -4621,10 +4883,11 @@ export default function CameraRecorder() {
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4 text-xs">
                 <p className="text-gray-600 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200">💡 Shortcuts work when not typing in input fields</p>
                 <p className="text-gray-600 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-3 border border-purple-200">🖱️ When zoomed in, drag to pan the video</p>
                 <p className="text-gray-600 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-3 border border-violet-200">🎨 Purple area shows where effects will be applied</p>
+                <p className="text-gray-600 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-3 border border-yellow-200">💡 Light mode: complete ring, controls overlay (fullscreen only)</p>
               </div>
             </div>
           </CardContent>
