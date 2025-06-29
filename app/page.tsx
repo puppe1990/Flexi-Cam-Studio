@@ -2897,7 +2897,7 @@ export default function CameraRecorder() {
   // }, [])
 
   // Reset to start over
-  const resetRecording = useCallback(() => {
+  const resetRecording = useCallback((clearScreenshots = false) => {
     setRecordingState("idle")
     setRecordedBlob(null)
     setRecordingTime(0)
@@ -2912,7 +2912,7 @@ export default function CameraRecorder() {
     resetZoom()
     setIsMirrored(false)
 
-    // Clean up thumbnails
+    // Clean up thumbnails (these are tied to specific videos)
     setThumbnails((prevThumbnails) => {
       prevThumbnails.forEach((thumbnail) => {
         if (!thumbnail.url.startsWith("data:")) {
@@ -2922,13 +2922,16 @@ export default function CameraRecorder() {
       return []
     })
 
-    // Clean up screenshots
-    setScreenshots((prevScreenshots) => {
-      prevScreenshots.forEach((screenshot) => {
-        URL.revokeObjectURL(screenshot.url)
+    // Only clear screenshots if explicitly requested
+    // Screenshots are independent of recordings and should persist across sessions
+    if (clearScreenshots) {
+      setScreenshots((prevScreenshots) => {
+        prevScreenshots.forEach((screenshot) => {
+          URL.revokeObjectURL(screenshot.url)
+        })
+        return []
       })
-      return []
-    })
+    }
 
     if (videoRef.current) {
       videoRef.current.src = ""
@@ -2966,7 +2969,16 @@ export default function CameraRecorder() {
       if (pipAnimationRef.current) {
         cancelAnimationFrame(pipAnimationRef.current)
       }
-      // Cleanup on unmount
+      // Note: Screenshots and thumbnails cleanup moved to separate effect to prevent 
+      // clearing them when camera reinitializes due to aspect ratio changes
+    }
+  }, [isMounted, initializeCamera])
+
+  // Cleanup screenshots and thumbnails only on component unmount
+  useEffect(() => {
+    // This effect only runs once on mount and cleans up on unmount
+    return () => {
+      // Cleanup screenshots on unmount only
       setScreenshots((prevScreenshots) => {
         prevScreenshots.forEach((screenshot) => {
           URL.revokeObjectURL(screenshot.url)
@@ -2982,7 +2994,7 @@ export default function CameraRecorder() {
         return []
       })
     }
-  }, [isMounted, initializeCamera])
+  }, []) // Empty dependency array - only runs on mount/unmount
 
   // Update video time
   useEffect(() => {
@@ -4936,7 +4948,7 @@ export default function CameraRecorder() {
                     </Button>
 
                     <Button 
-                      onClick={resetRecording} 
+                      onClick={() => resetRecording(false)} 
                       variant="outline"
                       className="bg-gradient-to-r from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 border-gray-300 text-gray-700 hover:text-gray-800 transition-all duration-300 shadow-sm"
                     >
@@ -5445,6 +5457,10 @@ export default function CameraRecorder() {
               <div className="flex items-start gap-2">
                 <span className="font-semibold text-blue-600">8.1.</span>
                 <span>Toggle "Quality" between HD and 4K for higher resolution screenshots (4K: 3840x2160 for 16:9, 2160x3840 for 9:16, etc.)</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-blue-600">8.2.</span>
+                <span>Screenshots persist across aspect ratio changes and recording sessions - only cleared when you manually click "Clear All"</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="font-semibold text-blue-600">9.</span>
