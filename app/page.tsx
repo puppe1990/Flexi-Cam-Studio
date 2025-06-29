@@ -33,17 +33,25 @@ import {
 import JSZip from "jszip"
 import VideoEffectsEditor from "@/components/VideoEffectsEditor"
 
-// Types (can be imported from types/camera.ts)
+// Types (can be imported from types/camera.ts)  
 type RecordingState = "idle" | "recording" | "stopped" | "editing" | "processing"
 type ExportFormat = "webm" | "mp4" | "avi" | "mov" | "3gp"
 type ScreenshotFormat = "png" | "jpeg"
 type AspectRatio = "16:9" | "9:16" | "4:3" | "1:1"
+type RecordingMode = "webcam" | "screen" | "pip" // Picture-in-Picture
 
 interface CropArea {
   x: number
   y: number
   width: number
   height: number
+}
+
+interface PipPosition {
+  x: number // percentage from left
+  y: number // percentage from top
+  width: number // percentage of screen width
+  height: number // percentage of screen height
 }
 
 export default function CameraRecorder() {
@@ -67,6 +75,7 @@ export default function CameraRecorder() {
   const [showFlash, setShowFlash] = useState(false)
   const [screenshotCount, setScreenshotCount] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isHDScreenshot, setIsHDScreenshot] = useState(false)
 
   // Add mounted state to prevent hydration errors
   const [isMounted, setIsMounted] = useState(false)
@@ -119,6 +128,15 @@ export default function CameraRecorder() {
   const [isLightMode, setIsLightMode] = useState(false)
   const [lightIntensity, setLightIntensity] = useState(100) // 0-100 percentage
 
+  // Picture-in-Picture functionality
+  const [recordingMode, setRecordingMode] = useState<RecordingMode>("webcam")
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null)
+  const [pipPosition, setPipPosition] = useState<PipPosition>({ x: 80, y: 20, width: 25, height: 25 })
+  const [screenError, setScreenError] = useState<string | null>(null)
+  const [isPipDragging, setIsPipDragging] = useState(false)
+  const [isPipResizing, setIsPipResizing] = useState(false)
+  const [pipDragStart, setPipDragStart] = useState({ x: 0, y: 0 })
+
   // Tab management
   const [activeTab, setActiveTab] = useState("camera")
 
@@ -131,12 +149,15 @@ export default function CameraRecorder() {
   const cropCanvasRef = useRef<HTMLCanvasElement>(null)
   const effectCanvasRef = useRef<HTMLCanvasElement>(null)
   const previewEffectCanvasRef = useRef<HTMLCanvasElement>(null)
+  const pipCanvasRef = useRef<HTMLCanvasElement>(null)
+  const screenVideoRef = useRef<HTMLVideoElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const croppedStreamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const previewEffectAnimationRef = useRef<number | null>(null)
+  const pipAnimationRef = useRef<number | null>(null)
   const isCapturingRef = useRef<boolean>(false)
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -1052,8 +1073,8 @@ export default function CameraRecorder() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // Only show effect preview in effect crop mode and when not recording to reduce performance impact
-    if (!isEffectCropMode || videoEffect === ("none" as VideoEffect) || recordingState === "recording") {
+    // Only show effect preview in effect crop mode and when idle to reduce performance impact
+    if (!isEffectCropMode || videoEffect === ("none" as VideoEffect) || recordingState !== "idle") {
       canvas.style.display = "none"
       return
     }
@@ -1176,7 +1197,7 @@ export default function CameraRecorder() {
     ctx.drawImage(tempCanvas, 0, 0, effectWidth, effectHeight, effectStartX, effectStartY, effectWidth, effectHeight)
 
     // Continue animation with reduced frame rate for better performance
-    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect) && recordingState !== "recording") {
+    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect) && recordingState === "idle") {
       // Limit to ~15 FPS for preview to reduce CPU usage
       setTimeout(() => {
         previewEffectAnimationRef.current = requestAnimationFrame(updateEffectPreview)
@@ -1186,7 +1207,7 @@ export default function CameraRecorder() {
 
   // Start/stop effect preview animation
   useEffect(() => {
-    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect) && recordingState !== "recording") {
+    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect) && recordingState === "idle") {
       // Cancel any existing animation before starting a new one
       if (previewEffectAnimationRef.current) {
         cancelAnimationFrame(previewEffectAnimationRef.current)
@@ -1384,6 +1405,244 @@ export default function CameraRecorder() {
   const adjustLightIntensity = useCallback((intensity: number) => {
     setLightIntensity(Math.max(10, Math.min(100, intensity)))
   }, [])
+
+  // Screen capture functionality
+  const startScreenCapture = useCallback(async () => {
+    try {
+      setScreenError(null)
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          width: { ideal: 1920, max: 1920 },
+          height: { ideal: 1080, max: 1080 },
+          frameRate: { ideal: 30, max: 30 }
+        },
+        audio: true
+      })
+
+      setScreenStream(displayStream)
+      
+      if (screenVideoRef.current) {
+        screenVideoRef.current.srcObject = displayStream
+      }
+
+      // Handle stream end (user stops sharing)
+      displayStream.getVideoTracks()[0].onended = () => {
+        setScreenStream(null)
+        setRecordingMode("webcam")
+        setScreenError("Screen sharing stopped")
+      }
+
+    } catch (error) {
+      console.error("Error starting screen capture:", error)
+      setScreenError("Unable to start screen capture. Please check permissions.")
+      setRecordingMode("webcam")
+    }
+  }, [])
+
+  const stopScreenCapture = useCallback(() => {
+    if (screenStream) {
+      screenStream.getTracks().forEach(track => track.stop())
+      setScreenStream(null)
+    }
+    setScreenError(null)
+  }, [screenStream])
+
+  // PIP Canvas composition
+  const updatePipCanvas = useCallback(() => {
+    if (!pipCanvasRef.current || !screenVideoRef.current || !videoRef.current || recordingMode !== "pip") return
+    
+    const canvas = pipCanvasRef.current
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    const screenVideo = screenVideoRef.current
+    const webcamVideo = videoRef.current
+
+    // Set canvas size to screen video size
+    const screenWidth = screenVideo.videoWidth || 1920
+    const screenHeight = screenVideo.videoHeight || 1080
+    canvas.width = screenWidth
+    canvas.height = screenHeight
+
+    // Clear canvas
+    ctx.clearRect(0, 0, screenWidth, screenHeight)
+
+    // Draw screen capture (background)
+    ctx.drawImage(screenVideo, 0, 0, screenWidth, screenHeight)
+
+    // Calculate webcam overlay position and size (centered positioning)
+    const pipW = (pipPosition.width / 100) * screenWidth
+    const pipH = (pipPosition.height / 100) * screenHeight
+    const pipX = ((pipPosition.x / 100) * screenWidth) - (pipW / 2)
+    const pipY = ((pipPosition.y / 100) * screenHeight) - (pipH / 2)
+
+    // Draw webcam overlay with rounded corners and border
+    ctx.save()
+    
+    // Create rounded rectangle path
+    const radius = 8
+    ctx.beginPath()
+    ctx.roundRect(pipX, pipY, pipW, pipH, radius)
+    ctx.clip()
+
+    // Draw webcam video (mirrored if enabled)
+    if (isMirrored) {
+      ctx.save()
+      ctx.scale(-1, 1)
+      ctx.drawImage(webcamVideo, -(pipX + pipW), pipY, pipW, pipH)
+      ctx.restore()
+    } else {
+      ctx.drawImage(webcamVideo, pipX, pipY, pipW, pipH)
+    }
+
+    ctx.restore()
+
+    // Draw border around webcam
+    ctx.strokeStyle = '#ffffff'
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.roundRect(pipX, pipY, pipW, pipH, radius)
+    ctx.stroke()
+
+    // Continue animation
+    if (recordingMode === "pip") {
+      pipAnimationRef.current = requestAnimationFrame(updatePipCanvas)
+    }
+  }, [recordingMode, pipPosition, isMirrored])
+
+  // Start/stop PIP canvas animation
+  useEffect(() => {
+    if (recordingMode === "pip" && screenStream && streamRef.current) {
+      updatePipCanvas()
+    } else if (pipAnimationRef.current) {
+      cancelAnimationFrame(pipAnimationRef.current)
+      pipAnimationRef.current = null
+    }
+
+    return () => {
+      if (pipAnimationRef.current) {
+        cancelAnimationFrame(pipAnimationRef.current)
+        pipAnimationRef.current = null
+      }
+    }
+  }, [recordingMode, screenStream, updatePipCanvas])
+
+  // Create PIP stream
+  const createPipStream = useCallback(() => {
+    if (!pipCanvasRef.current || recordingMode !== "pip") return null
+
+    const canvas = pipCanvasRef.current
+    const canvasStream = canvas.captureStream(30)
+
+    // Add audio from screen capture
+    if (screenStream) {
+      const audioTracks = screenStream.getAudioTracks()
+      if (audioTracks.length > 0) {
+        canvasStream.addTrack(audioTracks[0])
+      }
+    }
+
+    return canvasStream
+  }, [recordingMode, screenStream])
+
+  // Recording mode controls
+  const switchToWebcam = useCallback(() => {
+    stopScreenCapture()
+    setRecordingMode("webcam")
+  }, [stopScreenCapture])
+
+  const switchToScreen = useCallback(async () => {
+    await startScreenCapture()
+    if (screenStream) {
+      setRecordingMode("screen")
+    }
+  }, [startScreenCapture, screenStream])
+
+  const switchToPip = useCallback(async () => {
+    if (!screenStream) {
+      await startScreenCapture()
+    }
+    if (screenStream) {
+      setRecordingMode("pip")
+    }
+  }, [screenStream, startScreenCapture])
+
+  // PIP position controls
+  const handlePipMouseDown = useCallback((e: React.MouseEvent, action: "drag" | "resize") => {
+    if (!videoContainerRef.current) return
+
+    e.preventDefault()
+    e.stopPropagation()
+
+    const rect = videoContainerRef.current.getBoundingClientRect()
+    const relativeX = ((e.clientX - rect.left) / rect.width) * 100
+    const relativeY = ((e.clientY - rect.top) / rect.height) * 100
+
+    setPipDragStart({ x: relativeX, y: relativeY })
+
+    if (action === "drag") {
+      setIsPipDragging(true)
+    } else {
+      setIsPipResizing(true)
+    }
+  }, [])
+
+  const handlePipMouseMove = useCallback((e: MouseEvent) => {
+    if (!videoContainerRef.current || (!isPipDragging && !isPipResizing)) return
+
+    const rect = videoContainerRef.current.getBoundingClientRect()
+    const relativeX = ((e.clientX - rect.left) / rect.width) * 100
+    const relativeY = ((e.clientY - rect.top) / rect.height) * 100
+
+    if (isPipDragging) {
+      const deltaX = relativeX - pipDragStart.x
+      const deltaY = relativeY - pipDragStart.y
+
+      setPipPosition(prev => {
+        const halfWidth = prev.width / 2
+        const halfHeight = prev.height / 2
+        return {
+          ...prev,
+          x: Math.max(halfWidth, Math.min(100 - halfWidth, prev.x + deltaX)),
+          y: Math.max(halfHeight, Math.min(100 - halfHeight, prev.y + deltaY))
+        }
+      })
+
+      setPipDragStart({ x: relativeX, y: relativeY })
+    } else if (isPipResizing) {
+      setPipPosition(prev => {
+        const centerX = prev.x
+        const centerY = prev.y
+        
+        // Calculate new size based on distance from center
+        const newWidth = Math.max(15, Math.min(40, Math.abs(relativeX - centerX) * 2))
+        const newHeight = Math.max(15, Math.min(40, Math.abs(relativeY - centerY) * 2))
+        
+        return {
+          ...prev,
+          width: newWidth,
+          height: newHeight
+        }
+      })
+    }
+  }, [isPipDragging, isPipResizing, pipDragStart])
+
+  const handlePipMouseUp = useCallback(() => {
+    setIsPipDragging(false)
+    setIsPipResizing(false)
+  }, [])
+
+  // Add PIP mouse event listeners
+  useEffect(() => {
+    if (isPipDragging || isPipResizing) {
+      document.addEventListener("mousemove", handlePipMouseMove)
+      document.addEventListener("mouseup", handlePipMouseUp)
+      return () => {
+        document.removeEventListener("mousemove", handlePipMouseMove)
+        document.removeEventListener("mouseup", handlePipMouseUp)
+      }
+    }
+  }, [isPipDragging, isPipResizing, handlePipMouseMove, handlePipMouseUp])
 
 
 
@@ -1940,41 +2199,65 @@ export default function CameraRecorder() {
             break
         }
         
-        // Calculate screenshot dimensions based on selected aspect ratio
+        // Calculate screenshot dimensions based on selected aspect ratio and HD setting
         let screenshotWidth: number
         let screenshotHeight: number
         
-        // Use exact dimensions for each aspect ratio to avoid any rounding issues
-        switch (aspectRatio) {
-          case "9:16":
-            screenshotWidth = 1080
-            screenshotHeight = 1920
-            break
-          case "4:3":
-            screenshotWidth = 1440
-            screenshotHeight = 1080
-            break
-          case "1:1":
-            screenshotWidth = 1080
-            screenshotHeight = 1080
-            break
-          default: // "16:9"
-            screenshotWidth = 1920
-            screenshotHeight = 1080
-            break
+        // Use exact dimensions for each aspect ratio, with HD option for higher resolution
+        if (isHDScreenshot) {
+          // HD/4K dimensions for better quality
+          switch (aspectRatio) {
+            case "9:16":
+              screenshotWidth = 2160  // 4K vertical
+              screenshotHeight = 3840
+              break
+            case "4:3":
+              screenshotWidth = 2880  // Enhanced 4:3
+              screenshotHeight = 2160
+              break
+            case "1:1":
+              screenshotWidth = 2160  // 4K square
+              screenshotHeight = 2160
+              break
+            default: // "16:9"
+              screenshotWidth = 3840  // 4K landscape
+              screenshotHeight = 2160
+              break
+          }
+        } else {
+          // Standard HD dimensions
+          switch (aspectRatio) {
+            case "9:16":
+              screenshotWidth = 1080
+              screenshotHeight = 1920
+              break
+            case "4:3":
+              screenshotWidth = 1440
+              screenshotHeight = 1080
+              break
+            case "1:1":
+              screenshotWidth = 1080
+              screenshotHeight = 1080
+              break
+            default: // "16:9"
+              screenshotWidth = 1920
+              screenshotHeight = 1080
+              break
+          }
         }
         
         canvas.width = screenshotWidth
         canvas.height = screenshotHeight
         
         // Debug screenshot dimensions
-        console.log(`📸 Screenshot FINAL dimensions for ${aspectRatio}:`, {
+        console.log(`📸 Screenshot FINAL dimensions for ${aspectRatio} (${isHDScreenshot ? 'HD/4K' : 'Standard'}):`, {
           targetAspectRatio,
           screenshotSize: { width: screenshotWidth, height: screenshotHeight },
           actualAspectRatio: screenshotWidth / screenshotHeight,
           videoSize: { width: videoWidth, height: videoHeight, aspectRatio: videoAspectRatio },
           isVertical: screenshotHeight > screenshotWidth,
-          expectedVertical: aspectRatio === "9:16"
+          expectedVertical: aspectRatio === "9:16",
+          isHD: isHDScreenshot
         })
         
         // Clear canvas with black background
@@ -2047,14 +2330,16 @@ export default function CameraRecorder() {
       // Convert canvas to blob
       const quality = screenshotFormat === "jpeg" ? 0.9 : undefined
       
-      // Final debug log before saving
-      console.log(`💾 Saving screenshot with canvas dimensions:`, {
-        canvasWidth: canvas.width,
-        canvasHeight: canvas.height,
-        aspectRatio: canvas.width / canvas.height,
-        expectedAspectRatio: aspectRatio,
-        isCorrectVertical: aspectRatio === "9:16" && canvas.height > canvas.width
-      })
+                    // Final debug log before saving
+              console.log(`💾 Saving screenshot with canvas dimensions (${isHDScreenshot ? 'HD/4K' : 'Standard'}):`, {
+                canvasWidth: canvas.width,
+                canvasHeight: canvas.height,
+                aspectRatio: canvas.width / canvas.height,
+                expectedAspectRatio: aspectRatio,
+                isCorrectVertical: aspectRatio === "9:16" && canvas.height > canvas.width,
+                isHD: isHDScreenshot,
+                resolution: `${canvas.width}x${canvas.height}`
+              })
       
       canvas.toBlob(
         (blob) => {
@@ -2073,7 +2358,7 @@ export default function CameraRecorder() {
               setScreenshots((prev) => [newScreenshot, ...prev]) // Keep all screenshots
               setScreenshotCount((prev) => prev + 1)
               
-              console.log(`✅ Screenshot saved successfully! Check if it's vertical: ${canvas.height > canvas.width}`)
+              console.log(`✅ Screenshot saved successfully! Resolution: ${canvas.width}x${canvas.height} (${isHDScreenshot ? 'HD/4K' : 'Standard'}) - Vertical: ${canvas.height > canvas.width}`)
             } catch (error) {
               console.error("Error creating screenshot:", error)
             } finally {
@@ -2089,7 +2374,7 @@ export default function CameraRecorder() {
         quality,
       )
     },
-    [recordingState, screenshotFormat, isCropMode, cropArea, isFullscreen, isMirrored, isEffectCropMode, videoEffect, effectIntensity, applyEffectToScreenshot, aspectRatio, getVideoDisplayArea, isCapturingScreenshot],
+    [recordingState, screenshotFormat, isCropMode, cropArea, isFullscreen, isMirrored, isEffectCropMode, videoEffect, effectIntensity, applyEffectToScreenshot, aspectRatio, getVideoDisplayArea, isCapturingScreenshot, isHDScreenshot],
   )
 
   // Cancel screenshot timer
@@ -2261,7 +2546,10 @@ export default function CameraRecorder() {
 
   // Start recording with format selection and crop support
   const startRecording = useCallback(() => {
-    if (!streamRef.current) return
+    // Check required streams based on recording mode
+    if (recordingMode === "webcam" && !streamRef.current) return
+    if (recordingMode === "screen" && !screenStream) return
+    if (recordingMode === "pip" && (!streamRef.current || !screenStream)) return
 
     try {
       let mimeType = "video/webm;codecs=vp9"
@@ -2308,26 +2596,46 @@ export default function CameraRecorder() {
         return canvasStream
       }
 
-      // Use effect stream if any effect is enabled, cropped stream if crop mode is enabled, or mirrored stream if mirror mode is enabled
-      let recordingStream = streamRef.current
-      if (videoEffect !== ("none" as VideoEffect) || isEffectCropMode) {
-        const effectStream = createEffectStream()
-        if (effectStream) {
-          recordingStream = effectStream
-          croppedStreamRef.current = effectStream
+      // Determine recording stream based on mode
+      let recordingStream: MediaStream | null = null
+
+      if (recordingMode === "screen") {
+        // Screen recording only
+        recordingStream = screenStream
+      } else if (recordingMode === "pip") {
+        // Picture-in-picture mode
+        const pipStream = createPipStream()
+        if (pipStream) {
+          recordingStream = pipStream
+          croppedStreamRef.current = pipStream
         }
-      } else if (isCropMode) {
-        const croppedStream = createCroppedStream()
-        if (croppedStream) {
-          recordingStream = croppedStream
-          croppedStreamRef.current = croppedStream
+      } else {
+        // Webcam mode - apply effects, crop, or mirror as needed
+        recordingStream = streamRef.current
+        
+        if (videoEffect !== ("none" as VideoEffect) || isEffectCropMode) {
+          const effectStream = createEffectStream()
+          if (effectStream) {
+            recordingStream = effectStream
+            croppedStreamRef.current = effectStream
+          }
+        } else if (isCropMode) {
+          const croppedStream = createCroppedStream()
+          if (croppedStream) {
+            recordingStream = croppedStream
+            croppedStreamRef.current = croppedStream
+          }
+        } else if (isMirrored) {
+          const mirroredStream = createMirroredStream()
+          if (mirroredStream) {
+            recordingStream = mirroredStream
+            croppedStreamRef.current = mirroredStream // Reuse the ref for cleanup
+          }
         }
-      } else if (isMirrored) {
-        const mirroredStream = createMirroredStream()
-        if (mirroredStream) {
-          recordingStream = mirroredStream
-          croppedStreamRef.current = mirroredStream // Reuse the ref for cleanup
-        }
+      }
+
+      if (!recordingStream) {
+        throw new Error("No valid recording stream available")
       }
 
       const mediaRecorder = new MediaRecorder(recordingStream, { mimeType })
@@ -2383,6 +2691,8 @@ export default function CameraRecorder() {
       setCameraError("Failed to start recording")
     }
   }, [
+    recordingMode,
+    screenStream,
     exportFormat,
     mp4RecordingSupported,
     isCropMode,
@@ -2391,6 +2701,7 @@ export default function CameraRecorder() {
     videoEffect,
     isEffectCropMode,
     createEffectStream,
+    createPipStream,
   ])
 
   // Stop recording
@@ -2643,11 +2954,17 @@ export default function CameraRecorder() {
       if (croppedStreamRef.current) {
         croppedStreamRef.current.getTracks().forEach((track) => track.stop())
       }
+      if (screenStream) {
+        screenStream.getTracks().forEach((track) => track.stop())
+      }
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current)
       }
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current)
+      }
+      if (pipAnimationRef.current) {
+        cancelAnimationFrame(pipAnimationRef.current)
       }
       // Cleanup on unmount
       setScreenshots((prevScreenshots) => {
@@ -2885,6 +3202,18 @@ export default function CameraRecorder() {
                 WebCodecs Available
               </Badge>
             )}
+            
+            {/* Recording Mode Badge */}
+            <Badge variant="outline" className={`shadow-sm ${
+              recordingMode === "webcam" ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 text-blue-700" :
+              recordingMode === "screen" ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-300 text-green-700" :
+              "bg-gradient-to-r from-purple-50 to-pink-50 border-purple-300 text-purple-700"
+            }`}>
+              {recordingMode === "webcam" ? "📹 Webcam" : 
+               recordingMode === "screen" ? "🖥️ Screen" : 
+               "📺 Picture-in-Picture"}
+            </Badge>
+
             {isCropMode && (
               <Badge variant="outline" className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-300 text-orange-700 shadow-sm">
                 Crop Mode Active
@@ -2909,6 +3238,11 @@ export default function CameraRecorder() {
             {isLightMode && (
               <Badge variant="outline" className="bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-300 text-yellow-700 shadow-sm">
                 Light Mode {lightIntensity}%
+              </Badge>
+            )}
+            {isHDScreenshot && (
+              <Badge variant="outline" className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-300 text-purple-700 shadow-sm">
+                4K Screenshots
               </Badge>
             )}
           </div>
@@ -3086,7 +3420,7 @@ export default function CameraRecorder() {
           </CardHeader>
 
           <CardContent className="space-y-6 p-8">
-            {/* Error Message */}
+            {/* Error Messages */}
             {cameraError && (
               <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-2xl p-6 text-red-700 shadow-sm">
                 <div className="flex items-center gap-3">
@@ -3096,6 +3430,19 @@ export default function CameraRecorder() {
                     </svg>
                   </div>
                   <span className="font-semibold">{cameraError}</span>
+                </div>
+              </div>
+            )}
+
+            {screenError && (
+              <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-2xl p-6 text-orange-700 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-100 rounded-xl">
+                    <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <span className="font-semibold">{screenError}</span>
                 </div>
               </div>
             )}
@@ -3133,35 +3480,127 @@ export default function CameraRecorder() {
                     : "w-full h-full"
                 }
                 style={{
-                  transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+                  transform: recordingMode === "screen" ? "none" : `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`,
                   cursor:
+                    recordingMode === "screen" ? "default" :
                     zoomLevel > 1 && !isCropMode && !isEffectCropMode ? (isPanning ? "grabbing" : "grab") : "default",
                 }}
-                onMouseDown={handlePanStart}
+                onMouseDown={recordingMode === "screen" ? undefined : handlePanStart}
               >
-                {isMounted ? (
-                  <video
-                    ref={videoRef}
-                    className="w-full h-full object-contain"
-                    style={{
-                      transform: isMirrored ? "scaleX(-1)" : "none",
-                      filter:
-                        videoEffect === "blur" && !isEffectCropMode
-                          ? `blur(${effectIntensity * 2}px)`
-                          : "none",
-                      imageRendering: videoEffect === "pixelate" && !isEffectCropMode ? "pixelated" : "auto",
-                    }}
-                    autoPlay
-                    muted={recordingState === "idle" || recordingState === "recording"}
-                    playsInline
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                    <div className="text-white text-center">
-                      <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                      <p className="text-lg opacity-75">Camera Loading...</p>
-                    </div>
+                {/* Screen Recording Mode */}
+                {recordingMode === "screen" && isMounted ? (
+                  <div className="relative w-full h-full">
+                    {screenStream ? (
+                      <video
+                        ref={screenVideoRef}
+                        className="w-full h-full object-contain"
+                        autoPlay
+                        muted={recordingState === "idle" || recordingState === "recording"}
+                        playsInline
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                        <div className="text-white text-center">
+                          <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          <p className="text-lg opacity-75">Click "Screen" to start screen capture</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                                 ) : recordingMode === "pip" && isMounted ? (
+                   /* Picture-in-Picture Mode */
+                   <div className="relative w-full h-full">
+                     {screenStream ? (
+                       <>
+                         {/* Screen capture background */}
+                         <video
+                           ref={screenVideoRef}
+                           className="w-full h-full object-contain"
+                           autoPlay
+                           muted={recordingState === "idle" || recordingState === "recording"}
+                           playsInline
+                         />
+                         {/* Webcam Overlay - positioned relative to screen video */}
+                         <div 
+                           className="absolute border-2 border-white rounded-lg overflow-hidden shadow-lg cursor-move z-10"
+                           style={{
+                             left: `calc(${pipPosition.x}% - ${pipPosition.width / 2}%)`,
+                             top: `calc(${pipPosition.y}% - ${pipPosition.height / 2}%)`,
+                             width: `${Math.min(pipPosition.width, 40)}%`,
+                             height: `${Math.min(pipPosition.height, 40)}%`,
+                             minWidth: '120px',
+                             minHeight: '90px',
+                             maxWidth: '400px',
+                             maxHeight: '300px',
+                           }}
+                           onMouseDown={(e) => handlePipMouseDown(e, "drag")}
+                         >
+                           <video
+                             ref={videoRef}
+                             className="w-full h-full object-cover"
+                             style={{
+                               transform: isMirrored ? "scaleX(-1)" : "none",
+                             }}
+                             autoPlay
+                             muted={recordingState === "idle" || recordingState === "recording"}
+                             playsInline
+                           />
+                           {/* Resize handle */}
+                           <div 
+                             className="absolute bottom-0 right-0 w-4 h-4 bg-white bg-opacity-70 cursor-se-resize hover:bg-opacity-100 transition-all"
+                             onMouseDown={(e) => handlePipMouseDown(e, "resize")}
+                             style={{
+                               clipPath: 'polygon(100% 0, 0 100%, 100% 100%)'
+                             }}
+                           />
+                           {/* Drag handle indicator */}
+                           <div className="absolute top-1 left-1 text-white text-xs opacity-60 pointer-events-none">
+                             ⋮⋮
+                           </div>
+                         </div>
+                       </>
+                     ) : (
+                       <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                         <div className="text-white text-center">
+                           <div className="relative">
+                             <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                             </svg>
+                             <Camera className="w-8 h-8 absolute -bottom-1 -right-1 opacity-75" />
+                           </div>
+                           <p className="text-lg opacity-75">Click "PIP" to start Picture-in-Picture</p>
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                ) : (
+                  /* Webcam Mode */
+                  isMounted ? (
+                    <video
+                      ref={videoRef}
+                      className="w-full h-full object-contain"
+                      style={{
+                        transform: isMirrored ? "scaleX(-1)" : "none",
+                        filter:
+                          videoEffect === "blur" && !isEffectCropMode
+                            ? `blur(${effectIntensity * 2}px)`
+                            : "none",
+                        imageRendering: videoEffect === "pixelate" && !isEffectCropMode ? "pixelated" : "auto",
+                      }}
+                      autoPlay
+                      muted={recordingState === "idle" || recordingState === "recording"}
+                      playsInline
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                      <div className="text-white text-center">
+                        <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                        <p className="text-lg opacity-75">Camera Loading...</p>
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
 
@@ -4008,6 +4447,24 @@ export default function CameraRecorder() {
                           </button>
                         ))}
                       </div>
+
+                      <div className="w-px h-4 bg-white/20" />
+
+                      {/* Quality Buttons */}
+                      <div className="flex items-center gap-1">
+                        <span className="text-white text-xs font-medium mr-1">Quality:</span>
+                        <button
+                          onClick={() => setIsHDScreenshot(!isHDScreenshot)}
+                          className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                            isHDScreenshot
+                              ? "bg-purple-500 text-white"
+                              : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                          }`}
+                          title={isHDScreenshot ? "4K Quality (3840x2160 for 16:9)" : "HD Quality (1920x1080 for 16:9)"}
+                        >
+                          {isHDScreenshot ? "4K" : "HD"}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -4084,24 +4541,43 @@ export default function CameraRecorder() {
                   </div>
                 )}
 
-                {/* Quick Settings Row */}
-                {recordingState === "idle" && (
-                  <div className="flex items-center justify-center gap-6 flex-wrap text-sm">
-                    {/* Aspect Ratio */}
-                    <div className="flex items-center gap-2">
-                      <label className="font-medium text-slate-700">Aspect:</label>
-                      <Select value={aspectRatio} onValueChange={(value: AspectRatio) => setAspectRatio(value)}>
-                        <SelectTrigger className="w-24 h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="16:9">16:9</SelectItem>
-                          <SelectItem value="9:16">9:16</SelectItem>
-                          <SelectItem value="4:3">4:3</SelectItem>
-                          <SelectItem value="1:1">1:1</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                              {/* Quick Settings Row */}
+              {recordingState === "idle" && (
+                <div className="flex items-center justify-center gap-6 flex-wrap text-sm">
+                  {/* Recording Mode */}
+                  <div className="flex items-center gap-2">
+                    <label className="font-medium text-slate-700">Mode:</label>
+                    <Select value={recordingMode} onValueChange={(value: RecordingMode) => {
+                      if (value === "webcam") switchToWebcam()
+                      else if (value === "screen") switchToScreen()
+                      else if (value === "pip") switchToPip()
+                    }}>
+                      <SelectTrigger className="w-28 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="webcam">Webcam</SelectItem>
+                        <SelectItem value="screen">Screen</SelectItem>
+                        <SelectItem value="pip">PIP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Aspect Ratio */}
+                  <div className="flex items-center gap-2">
+                    <label className="font-medium text-slate-700">Aspect:</label>
+                    <Select value={aspectRatio} onValueChange={(value: AspectRatio) => setAspectRatio(value)}>
+                      <SelectTrigger className="w-24 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="16:9">16:9</SelectItem>
+                        <SelectItem value="9:16">9:16</SelectItem>
+                        <SelectItem value="4:3">4:3</SelectItem>
+                        <SelectItem value="1:1">1:1</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
                     {/* Zoom Controls */}
                     <div className="flex items-center gap-2">
@@ -4163,6 +4639,20 @@ export default function CameraRecorder() {
                           <SelectItem value="jpeg">JPEG</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    {/* HD Quality */}
+                    <div className="flex items-center gap-2">
+                      <label className="font-medium text-slate-700">Quality:</label>
+                      <Button
+                        onClick={() => setIsHDScreenshot(!isHDScreenshot)}
+                        variant={isHDScreenshot ? "default" : "outline"}
+                        size="sm"
+                        className={`h-6 px-2 text-xs ${isHDScreenshot ? "bg-purple-500 hover:bg-purple-600" : ""}`}
+                        title={isHDScreenshot ? "4K Quality (3840x2160 for 16:9)" : "HD Quality (1920x1080 for 16:9)"}
+                      >
+                        {isHDScreenshot ? "4K" : "HD"}
+                      </Button>
                     </div>
 
                     {/* Light Mode - Fullscreen Only */}
@@ -4360,6 +4850,47 @@ export default function CameraRecorder() {
                     Area: {Math.round(cropArea.width * 100)}% × {Math.round(cropArea.height * 100)}% • Position:{" "}
                     {Math.round(cropArea.x * 100)}%, {Math.round(cropArea.y * 100)}%
                   </p>
+                </div>
+              )}
+
+              {/* PIP Mode Info */}
+              {recordingState === "idle" && recordingMode === "pip" && screenStream && (
+                <div className="text-center text-sm text-slate-600 bg-purple-50 rounded-lg p-3">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <Camera className="w-4 h-4" />
+                    <span className="font-medium">Picture-in-Picture Active</span>
+                  </div>
+                  <p>Screen capture with webcam overlay • Drag webcam to reposition • Drag corner to resize</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Webcam Center: {Math.round(pipPosition.x)}%, {Math.round(pipPosition.y)}% • Size: {Math.round(pipPosition.width)}% × {Math.round(pipPosition.height)}%
+                  </p>
+                </div>
+              )}
+
+              {/* Screen Recording Mode Info */}
+              {recordingState === "idle" && recordingMode === "screen" && screenStream && (
+                <div className="text-center text-sm text-slate-600 bg-green-50 rounded-lg p-3">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span className="font-medium">Screen Recording Mode</span>
+                  </div>
+                  <p>Recording your screen with audio • Perfect for tutorials and presentations</p>
+                </div>
+              )}
+
+              {/* Webcam Mode Info */}
+              {recordingState === "idle" && recordingMode === "webcam" && (
+                <div className="text-center text-sm text-slate-600 bg-blue-50 rounded-lg p-3">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Camera className="w-4 h-4" />
+                    <span className="font-medium">Webcam Recording Mode</span>
+                  </div>
+                  <p>Traditional camera recording with all effects and features available</p>
                 </div>
               )}
 
@@ -4846,6 +5377,9 @@ export default function CameraRecorder() {
         <canvas ref={screenshotCanvasRef} className="hidden" />
         <canvas ref={cropCanvasRef} className="hidden" />
         <canvas ref={effectCanvasRef} className="hidden" />
+        <canvas ref={pipCanvasRef} className="hidden" />
+        {/* Hidden video elements for screen capture */}
+        <video ref={screenVideoRef} className="hidden" autoPlay muted playsInline />
         {/* Preview effect canvas is already in the video container */}
 
         {/* Instructions */}
@@ -4906,7 +5440,11 @@ export default function CameraRecorder() {
               </div>
               <div className="flex items-start gap-2">
                 <span className="font-semibold text-blue-600">8.</span>
-                <span>Click "Take Screenshot" to capture still images (cropped if crop mode is active)</span>
+                <span>Click "Take Screenshot" to capture still images in HD (1080p) or 4K quality (cropped if crop mode is active)</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-blue-600">8.1.</span>
+                <span>Toggle "Quality" between HD and 4K for higher resolution screenshots (4K: 3840x2160 for 16:9, 2160x3840 for 9:16, etc.)</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="font-semibold text-blue-600">9.</span>
@@ -5021,6 +5559,7 @@ export default function CameraRecorder() {
                 <p className="text-gray-600 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-3 border border-purple-200">🖱️ When zoomed in, drag to pan the video</p>
                 <p className="text-gray-600 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-3 border border-violet-200">🎨 Purple area shows where effects will be applied</p>
                 <p className="text-gray-600 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-3 border border-yellow-200">💡 Light mode: ring for 16:9/4:3, full-screen for 9:16/1:1 (fullscreen only)</p>
+                <p className="text-gray-600 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-3 border border-purple-200">📸 4K screenshots: Ultra high-res capture (3840x2160 for 16:9, up to 2160x3840 for 9:16)</p>
               </div>
             </div>
           </CardContent>
