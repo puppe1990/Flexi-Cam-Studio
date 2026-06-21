@@ -18,31 +18,34 @@ export const useScreenshot = () => {
   const screenshotCanvasRef = useRef<HTMLCanvasElement>(null)
 
   const setShowFlash = useCallback((show: boolean) => {
-    setScreenshotState(prev => ({ ...prev, showFlash: show }))
+    setScreenshotState((prev) => ({ ...prev, showFlash: show }))
   }, [])
 
   const addScreenshot = useCallback((screenshot: Screenshot) => {
-    setScreenshotState(prev => ({
+    setScreenshotState((prev) => ({
       ...prev,
       screenshots: [screenshot, ...prev.screenshots], // Keep all screenshots
       screenshotCount: prev.screenshotCount + 1,
     }))
   }, [])
 
-  const downloadScreenshot = useCallback((screenshot: Screenshot) => {
-    try {
-      const a = document.createElement("a")
-      a.href = screenshot.url
-      a.download = `screenshot-${screenshot.timestamp.getTime()}.${screenshotState.screenshotFormat}`
-      a.style.display = "none"
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-    } catch (error) {
-      console.error("Error downloading screenshot:", error)
-      window.open(screenshot.url, "_blank")
-    }
-  }, [screenshotState.screenshotFormat])
+  const downloadScreenshot = useCallback(
+    (screenshot: Screenshot) => {
+      try {
+        const a = document.createElement("a")
+        a.href = screenshot.url
+        a.download = `screenshot-${screenshot.timestamp.getTime()}.${screenshotState.screenshotFormat}`
+        a.style.display = "none"
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      } catch (error) {
+        console.error("Error downloading screenshot:", error)
+        window.open(screenshot.url, "_blank")
+      }
+    },
+    [screenshotState.screenshotFormat]
+  )
 
   const downloadAllScreenshots = useCallback(async () => {
     if (screenshotState.screenshots.length === 0) return
@@ -82,10 +85,14 @@ export const useScreenshot = () => {
         }, index * 500)
       })
     }
-  }, [screenshotState.screenshots, screenshotState.screenshotFormat, downloadScreenshot])
+  }, [
+    screenshotState.screenshots,
+    screenshotState.screenshotFormat,
+    downloadScreenshot,
+  ])
 
   const clearScreenshots = useCallback(() => {
-    setScreenshotState(prev => {
+    setScreenshotState((prev) => {
       prev.screenshots.forEach((screenshot) => {
         URL.revokeObjectURL(screenshot.url)
       })
@@ -93,66 +100,81 @@ export const useScreenshot = () => {
     })
   }, [])
 
-  const openScreenshotModal = useCallback((index: number) => {
-    if (screenshotState.screenshots.length > 0 && index >= 0 && index < screenshotState.screenshots.length) {
-      setScreenshotState(prev => ({
-        ...prev,
-        selectedScreenshotIndex: index,
-        isScreenshotModalOpen: true,
-      }))
-    }
-  }, [screenshotState.screenshots.length])
+  const openScreenshotModal = useCallback(
+    (index: number) => {
+      if (
+        screenshotState.screenshots.length > 0 &&
+        index >= 0 &&
+        index < screenshotState.screenshots.length
+      ) {
+        setScreenshotState((prev) => ({
+          ...prev,
+          selectedScreenshotIndex: index,
+          isScreenshotModalOpen: true,
+        }))
+      }
+    },
+    [screenshotState.screenshots.length]
+  )
 
   const closeScreenshotModal = useCallback(() => {
-    setScreenshotState(prev => ({ ...prev, isScreenshotModalOpen: false }))
+    setScreenshotState((prev) => ({ ...prev, isScreenshotModalOpen: false }))
   }, [])
 
   const navigateScreenshot = useCallback((direction: "prev" | "next") => {
-    setScreenshotState(prev => ({
+    setScreenshotState((prev) => ({
       ...prev,
-      selectedScreenshotIndex: direction === "prev" 
-        ? prev.selectedScreenshotIndex > 0 ? prev.selectedScreenshotIndex - 1 : prev.screenshots.length - 1
-        : prev.selectedScreenshotIndex < prev.screenshots.length - 1 ? prev.selectedScreenshotIndex + 1 : 0
+      selectedScreenshotIndex:
+        direction === "prev"
+          ? prev.selectedScreenshotIndex > 0
+            ? prev.selectedScreenshotIndex - 1
+            : prev.screenshots.length - 1
+          : prev.selectedScreenshotIndex < prev.screenshots.length - 1
+            ? prev.selectedScreenshotIndex + 1
+            : 0,
     }))
   }, [])
 
   const updateScreenshotFormat = useCallback((format: ScreenshotFormat) => {
-    setScreenshotState(prev => ({ ...prev, screenshotFormat: format }))
+    setScreenshotState((prev) => ({ ...prev, screenshotFormat: format }))
   }, [])
 
   const updateScreenshotTimer = useCallback((timer: number) => {
-    setScreenshotState(prev => ({ ...prev, screenshotTimer: timer }))
+    setScreenshotState((prev) => ({ ...prev, screenshotTimer: timer }))
   }, [])
 
-  const startTimerCountdown = useCallback((onComplete: () => void) => {
-    const countdown = screenshotState.screenshotTimer
-    setScreenshotState(prev => ({
-      ...prev,
-      isTimerActive: true,
-      timerCountdown: countdown,
-    }))
+  const startTimerCountdown = useCallback(
+    (onComplete: () => void) => {
+      const countdown = screenshotState.screenshotTimer
+      setScreenshotState((prev) => ({
+        ...prev,
+        isTimerActive: true,
+        timerCountdown: countdown,
+      }))
 
-    const countdownInterval = setInterval(() => {
-      setScreenshotState(prev => {
-        const newCountdown = prev.timerCountdown - 1
-        if (newCountdown <= 0) {
-          clearInterval(countdownInterval)
-          onComplete()
-          return {
-            ...prev,
-            isTimerActive: false,
-            timerCountdown: 0,
+      const countdownInterval = setInterval(() => {
+        setScreenshotState((prev) => {
+          const newCountdown = prev.timerCountdown - 1
+          if (newCountdown <= 0) {
+            clearInterval(countdownInterval)
+            onComplete()
+            return {
+              ...prev,
+              isTimerActive: false,
+              timerCountdown: 0,
+            }
           }
-        }
-        return { ...prev, timerCountdown: newCountdown }
-      })
-    }, 1000)
+          return { ...prev, timerCountdown: newCountdown }
+        })
+      }, 1000)
 
-    return countdownInterval
-  }, [screenshotState.screenshotTimer])
+      return countdownInterval
+    },
+    [screenshotState.screenshotTimer]
+  )
 
   const cancelTimer = useCallback(() => {
-    setScreenshotState(prev => ({
+    setScreenshotState((prev) => ({
       ...prev,
       isTimerActive: false,
       timerCountdown: 0,
@@ -175,4 +197,4 @@ export const useScreenshot = () => {
     startTimerCountdown,
     cancelTimer,
   }
-} 
+}

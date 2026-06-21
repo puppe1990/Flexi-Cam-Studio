@@ -54,8 +54,18 @@ export const ScreenshotModal: React.FC<ScreenshotModalProps> = ({
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -78,16 +88,36 @@ export const ScreenshotModal: React.FC<ScreenshotModalProps> = ({
                 onClick={() => onNavigate("prev")}
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all backdrop-blur-sm"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
                 </svg>
               </button>
               <button
                 onClick={() => onNavigate("next")}
                 className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all backdrop-blur-sm"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
                 </svg>
               </button>
             </>
@@ -120,7 +150,9 @@ export const ScreenshotModal: React.FC<ScreenshotModalProps> = ({
                       // This would need to be passed as a prop if we want to support direct navigation
                     }}
                     className={`w-2 h-2 rounded-full transition-all ${
-                      index === selectedIndex ? "bg-blue-600" : "bg-gray-300 hover:bg-gray-400"
+                      index === selectedIndex
+                        ? "bg-blue-600"
+                        : "bg-gray-300 hover:bg-gray-400"
                     }`}
                   />
                 ))}
@@ -139,4 +171,4 @@ export const ScreenshotModal: React.FC<ScreenshotModalProps> = ({
       </div>
     </div>
   )
-} 
+}

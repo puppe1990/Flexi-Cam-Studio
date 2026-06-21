@@ -74,7 +74,12 @@ export const ScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({
                       className="bg-blue-500 hover:bg-blue-600 text-white p-1 rounded"
                       title="View"
                     >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -111,4 +116,4 @@ export const ScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({
       </CardContent>
     </Card>
   )
-} 
+}

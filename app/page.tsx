@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Slider } from "@/components/ui/slider"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Camera,
   Square,
@@ -29,8 +35,13 @@ import {
 
 import JSZip from "jszip"
 
-// Types (can be imported from types/camera.ts)  
-type RecordingState = "idle" | "recording" | "stopped" | "editing" | "processing"
+// Types (can be imported from types/camera.ts)
+type RecordingState =
+  | "idle"
+  | "recording"
+  | "stopped"
+  | "editing"
+  | "processing"
 type ExportFormat = "webm" | "mp4" | "avi" | "mov" | "3gp"
 type ScreenshotFormat = "png" | "jpeg"
 type AspectRatio = "16:9" | "9:16" | "4:3" | "1:1"
@@ -61,13 +72,18 @@ export default function CameraRecorder() {
   const [currentTime, setCurrentTime] = useState(0)
   const [processingProgress, setProcessingProgress] = useState(0)
   const [cameraError, setCameraError] = useState<string | null>(null)
-  const [thumbnails, setThumbnails] = useState<Array<{ time: number; url: string }>>([])
+  const [thumbnails, setThumbnails] = useState<
+    Array<{ time: number; url: string }>
+  >([])
   const [isGeneratingThumbnails, setIsGeneratingThumbnails] = useState(false)
   const [exportFormat, setExportFormat] = useState<ExportFormat>("webm")
   const [webCodecsSupported, setWebCodecsSupported] = useState(false)
   const [mp4RecordingSupported, setMp4RecordingSupported] = useState(false)
-  const [screenshotFormat, setScreenshotFormat] = useState<ScreenshotFormat>("png")
-  const [screenshots, setScreenshots] = useState<Array<{ id: string; url: string; timestamp: Date }>>([])
+  const [screenshotFormat, setScreenshotFormat] =
+    useState<ScreenshotFormat>("png")
+  const [screenshots, setScreenshots] = useState<
+    Array<{ id: string; url: string; timestamp: Date }>
+  >([])
   const [showFlash, setShowFlash] = useState(false)
   const [screenshotCount, setScreenshotCount] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -84,7 +100,12 @@ export default function CameraRecorder() {
 
   // Crop functionality
   const [isCropMode, setIsCropMode] = useState(false)
-  const [cropArea, setCropArea] = useState<CropArea>({ x: 0.1, y: 0.1, width: 0.8, height: 0.8 })
+  const [cropArea, setCropArea] = useState<CropArea>({
+    x: 0.1,
+    y: 0.1,
+    width: 0.8,
+    height: 0.8,
+  })
   const [isDragging, setIsDragging] = useState(false)
   const [isResizing, setIsResizing] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
@@ -92,7 +113,9 @@ export default function CameraRecorder() {
   const [, setVideoContainerSize] = useState({ width: 0, height: 0 })
 
   // Aspect ratio functionality
-  const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "4:3" | "1:1">("16:9")
+  const [aspectRatio, setAspectRatio] = useState<
+    "16:9" | "9:16" | "4:3" | "1:1"
+  >("16:9")
 
   // Zoom functionality
   const [zoomLevel, setZoomLevel] = useState(1)
@@ -110,7 +133,12 @@ export default function CameraRecorder() {
 
   // Effect crop functionality
   const [isEffectCropMode, setIsEffectCropMode] = useState(false)
-  const [effectCropArea, setEffectCropArea] = useState<CropArea>({ x: 0.2, y: 0.2, width: 0.6, height: 0.6 })
+  const [effectCropArea, setEffectCropArea] = useState<CropArea>({
+    x: 0.2,
+    y: 0.2,
+    width: 0.6,
+    height: 0.6,
+  })
   const [isEffectDragging, setIsEffectDragging] = useState(false)
   const [isEffectResizing, setIsEffectResizing] = useState(false)
   const [effectDragStart, setEffectDragStart] = useState({ x: 0, y: 0 })
@@ -127,15 +155,18 @@ export default function CameraRecorder() {
   // Picture-in-Picture functionality
   const [recordingMode, setRecordingMode] = useState<RecordingMode>("webcam")
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null)
-  const [pipPosition, setPipPosition] = useState<PipPosition>({ x: 80, y: 20, width: 25, height: 25 })
+  const [pipPosition, setPipPosition] = useState<PipPosition>({
+    x: 80,
+    y: 20,
+    width: 25,
+    height: 25,
+  })
   const [screenError, setScreenError] = useState<string | null>(null)
   const [isPipDragging, setIsPipDragging] = useState(false)
   const [isPipResizing, setIsPipResizing] = useState(false)
   const [pipDragStart, setPipDragStart] = useState({ x: 0, y: 0 })
 
   // Tab management
-
-
 
   const videoContainerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -156,8 +187,6 @@ export default function CameraRecorder() {
   const isCapturingRef = useRef<boolean>(false)
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-
-
   // Helper function to calculate actual video display area within container
   const getVideoDisplayArea = useCallback(() => {
     if (!videoRef.current || !videoContainerRef.current) {
@@ -167,17 +196,17 @@ export default function CameraRecorder() {
         videoOffsetX: 0,
         videoOffsetY: 0,
         containerWidth: 0,
-        containerHeight: 0
+        containerHeight: 0,
       }
     }
 
     const video = videoRef.current
     const container = videoContainerRef.current
-    
+
     const videoWidth = video.videoWidth || 1280
     const videoHeight = video.videoHeight || 720
     const videoAspectRatio = videoWidth / videoHeight
-    
+
     // In fullscreen mode, we need to get the actual video element bounds instead of container
     let containerRect: DOMRect
     if (isFullscreen) {
@@ -187,18 +216,18 @@ export default function CameraRecorder() {
       // In normal mode, use the container bounds
       containerRect = container.getBoundingClientRect()
     }
-    
+
     const containerAspectRatio = containerRect.width / containerRect.height
-    
+
     let displayedVideoWidth: number
     let displayedVideoHeight: number
     let videoOffsetX = 0
     let videoOffsetY = 0
-    
+
     // Use a small tolerance for aspect ratio comparison to handle floating point precision
     const aspectRatioTolerance = 0.01
     const aspectRatioDiff = Math.abs(videoAspectRatio - containerAspectRatio)
-    
+
     if (aspectRatioDiff < aspectRatioTolerance) {
       // Aspect ratios are essentially the same - video fills container
       displayedVideoWidth = containerRect.width
@@ -218,29 +247,43 @@ export default function CameraRecorder() {
       videoOffsetX = (containerRect.width - displayedVideoWidth) / 2
       videoOffsetY = 0
     }
-    
+
     // Debug logging with fullscreen info (only when crop modes are active)
     if (isCropMode || isEffectCropMode) {
-      console.log(`📐 Video Display Area (${aspectRatio}, ${isFullscreen ? 'FULLSCREEN' : 'NORMAL'}):`, {
-        video: { width: videoWidth, height: videoHeight, aspectRatio: videoAspectRatio },
-        container: { width: containerRect.width, height: containerRect.height, aspectRatio: containerAspectRatio },
-        displayed: { width: displayedVideoWidth, height: displayedVideoHeight },
-        offset: { x: videoOffsetX, y: videoOffsetY },
-        aspectRatioDiff,
-        tolerance: 0.01,
-        mode: isFullscreen ? 'fullscreen' : 'normal',
-        cropMode: isCropMode,
-        effectCropMode: isEffectCropMode
-      })
+      console.log(
+        `📐 Video Display Area (${aspectRatio}, ${isFullscreen ? "FULLSCREEN" : "NORMAL"}):`,
+        {
+          video: {
+            width: videoWidth,
+            height: videoHeight,
+            aspectRatio: videoAspectRatio,
+          },
+          container: {
+            width: containerRect.width,
+            height: containerRect.height,
+            aspectRatio: containerAspectRatio,
+          },
+          displayed: {
+            width: displayedVideoWidth,
+            height: displayedVideoHeight,
+          },
+          offset: { x: videoOffsetX, y: videoOffsetY },
+          aspectRatioDiff,
+          tolerance: 0.01,
+          mode: isFullscreen ? "fullscreen" : "normal",
+          cropMode: isCropMode,
+          effectCropMode: isEffectCropMode,
+        }
+      )
     }
-    
+
     return {
       displayedVideoWidth,
       displayedVideoHeight,
       videoOffsetX,
       videoOffsetY,
       containerWidth: containerRect.width,
-      containerHeight: containerRect.height
+      containerHeight: containerRect.height,
     }
   }, [aspectRatio, isFullscreen, isCropMode, isEffectCropMode])
 
@@ -280,7 +323,7 @@ export default function CameraRecorder() {
         URL.revokeObjectURL(url)
       }, 1000)
     },
-    [exportFormat],
+    [exportFormat]
   )
 
   // Zoom controls
@@ -310,7 +353,7 @@ export default function CameraRecorder() {
         setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y })
       }
     },
-    [zoomLevel, panOffset, isCropMode, isEffectCropMode],
+    [zoomLevel, panOffset, isCropMode, isEffectCropMode]
   )
 
   const handlePanMove = useCallback(
@@ -327,7 +370,7 @@ export default function CameraRecorder() {
         setPanOffset({ x: clampedX, y: clampedY })
       }
     },
-    [isPanning, zoomLevel, panStart],
+    [isPanning, zoomLevel, panStart]
   )
 
   const handlePanEnd = useCallback(() => {
@@ -375,7 +418,9 @@ export default function CameraRecorder() {
     // Create MediaRecorder for the canvas stream
     const stream = canvas.captureStream(30)
     const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm",
+      mimeType: MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : "video/webm",
     })
 
     const chunks: Blob[] = []
@@ -529,7 +574,9 @@ export default function CameraRecorder() {
       case "mp4":
         if (MediaRecorder.isTypeSupported("video/mp4;codecs=avc1.42001E")) {
           mimeType = "video/mp4;codecs=avc1.42001E" // H.264 Constrained Baseline
-        } else if (MediaRecorder.isTypeSupported("video/mp4;codecs=avc1.42E01E")) {
+        } else if (
+          MediaRecorder.isTypeSupported("video/mp4;codecs=avc1.42E01E")
+        ) {
           mimeType = "video/mp4;codecs=avc1.42E01E" // H.264 Baseline
         } else if (MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")) {
           mimeType = "video/mp4;codecs=avc1"
@@ -693,7 +740,7 @@ export default function CameraRecorder() {
             mediaRecorder.stop()
           }
         },
-        (duration + 10) * 1000,
+        (duration + 10) * 1000
       )
     })
   }, [recordedBlob, trimStart, trimEnd, exportFormat])
@@ -712,7 +759,10 @@ export default function CameraRecorder() {
     if (!recordedBlob || !videoRef.current) return
 
     // If no trimming is needed, download original video
-    if (Math.abs(trimStart - 0) < 0.1 && Math.abs(trimEnd - videoDuration) < 0.1) {
+    if (
+      Math.abs(trimStart - 0) < 0.1 &&
+      Math.abs(trimEnd - videoDuration) < 0.1
+    ) {
       downloadBlob(recordedBlob, `recorded-video-${Date.now()}.${exportFormat}`)
       return
     }
@@ -756,12 +806,16 @@ export default function CameraRecorder() {
   useEffect(() => {
     const checkSupport = () => {
       // Check WebCodecs support
-      const webCodecsSupported = "VideoEncoder" in window && "VideoDecoder" in window && "AudioEncoder" in window
+      const webCodecsSupported =
+        "VideoEncoder" in window &&
+        "VideoDecoder" in window &&
+        "AudioEncoder" in window
       setWebCodecsSupported(webCodecsSupported)
 
       // Check MP4 recording support
       const mp4Supported =
-        MediaRecorder.isTypeSupported("video/mp4") || MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")
+        MediaRecorder.isTypeSupported("video/mp4") ||
+        MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")
       setMp4RecordingSupported(mp4Supported)
 
       // Set default format based on support
@@ -796,32 +850,32 @@ export default function CameraRecorder() {
 
       switch (aspectRatio) {
         case "9:16":
-          videoConstraints = { 
-            width: { ideal: 720, min: 480, max: 1080 }, 
+          videoConstraints = {
+            width: { ideal: 720, min: 480, max: 1080 },
             height: { ideal: 1280, min: 854, max: 1920 },
-            aspectRatio: 9/16
+            aspectRatio: 9 / 16,
           } // Vertical
           break
         case "4:3":
-          videoConstraints = { 
-            width: { ideal: 960, min: 640, max: 1440 }, 
+          videoConstraints = {
+            width: { ideal: 960, min: 640, max: 1440 },
             height: { ideal: 720, min: 480, max: 1080 },
-            aspectRatio: 4/3
+            aspectRatio: 4 / 3,
           } // Classic
           break
         case "1:1":
-          videoConstraints = { 
-            width: { ideal: 720, min: 480, max: 1080 }, 
+          videoConstraints = {
+            width: { ideal: 720, min: 480, max: 1080 },
             height: { ideal: 720, min: 480, max: 1080 },
-            aspectRatio: 1
+            aspectRatio: 1,
           } // Square
           break
         case "16:9":
         default:
-          videoConstraints = { 
-            width: { ideal: 1280, min: 854, max: 1920 }, 
+          videoConstraints = {
+            width: { ideal: 1280, min: 854, max: 1920 },
             height: { ideal: 720, min: 480, max: 1080 },
-            aspectRatio: 16/9
+            aspectRatio: 16 / 9,
           } // Landscape
           break
       }
@@ -833,7 +887,7 @@ export default function CameraRecorder() {
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        
+
         // Debug: Log actual video dimensions once video loads
         videoRef.current.onloadedmetadata = () => {
           console.log(`📹 Camera for ${aspectRatio}:`, {
@@ -841,9 +895,18 @@ export default function CameraRecorder() {
             actual: {
               width: videoRef.current?.videoWidth,
               height: videoRef.current?.videoHeight,
-              aspectRatio: (videoRef.current?.videoWidth || 0) / (videoRef.current?.videoHeight || 1)
+              aspectRatio:
+                (videoRef.current?.videoWidth || 0) /
+                (videoRef.current?.videoHeight || 1),
             },
-            containerExpected: aspectRatio === "9:16" ? 9/16 : aspectRatio === "4:3" ? 4/3 : aspectRatio === "1:1" ? 1 : 16/9
+            containerExpected:
+              aspectRatio === "9:16"
+                ? 9 / 16
+                : aspectRatio === "4:3"
+                  ? 4 / 3
+                  : aspectRatio === "1:1"
+                    ? 1
+                    : 16 / 9,
           })
         }
       }
@@ -855,7 +918,13 @@ export default function CameraRecorder() {
 
   // Create cropped stream from canvas
   const createCroppedStream = useCallback(() => {
-    if (!cropCanvasRef.current || !videoRef.current || !streamRef.current || !videoContainerRef.current) return null
+    if (
+      !cropCanvasRef.current ||
+      !videoRef.current ||
+      !streamRef.current ||
+      !videoContainerRef.current
+    )
+      return null
 
     const canvas = cropCanvasRef.current
     const video = videoRef.current
@@ -891,7 +960,7 @@ export default function CameraRecorder() {
     // Use a small tolerance for aspect ratio comparison to handle floating point precision
     const aspectRatioTolerance = 0.01
     const aspectRatioDiff = Math.abs(videoAspectRatio - containerAspectRatio)
-    
+
     if (aspectRatioDiff < aspectRatioTolerance) {
       // Aspect ratios are essentially the same - video fills container
       displayedVideoWidth = containerRect.width
@@ -919,16 +988,24 @@ export default function CameraRecorder() {
     const cropHeight = cropArea.height * containerRect.height
 
     // Adjust for video offset within container and convert to video coordinates
-    const videoCropStartX = (cropStartX - videoOffsetX) * (videoWidth / displayedVideoWidth)
-    const videoCropStartY = (cropStartY - videoOffsetY) * (videoHeight / displayedVideoHeight)
+    const videoCropStartX =
+      (cropStartX - videoOffsetX) * (videoWidth / displayedVideoWidth)
+    const videoCropStartY =
+      (cropStartY - videoOffsetY) * (videoHeight / displayedVideoHeight)
     const videoCropWidth = cropWidth * (videoWidth / displayedVideoWidth)
     const videoCropHeight = cropHeight * (videoHeight / displayedVideoHeight)
 
     // Clamp to video bounds
     const clampedX = Math.max(0, Math.min(videoCropStartX, videoWidth))
     const clampedY = Math.max(0, Math.min(videoCropStartY, videoHeight))
-    const clampedWidth = Math.max(1, Math.min(videoCropWidth, videoWidth - clampedX))
-    const clampedHeight = Math.max(1, Math.min(videoCropHeight, videoHeight - clampedY))
+    const clampedWidth = Math.max(
+      1,
+      Math.min(videoCropWidth, videoWidth - clampedX)
+    )
+    const clampedHeight = Math.max(
+      1,
+      Math.min(videoCropHeight, videoHeight - clampedY)
+    )
 
     // Set canvas size to crop dimensions
     canvas.width = clampedWidth
@@ -949,7 +1026,7 @@ export default function CameraRecorder() {
           -clampedWidth,
           0,
           clampedWidth,
-          clampedHeight, // Destination rectangle on canvas (flipped)
+          clampedHeight // Destination rectangle on canvas (flipped)
         )
         ctx.restore()
       } else {
@@ -962,7 +1039,7 @@ export default function CameraRecorder() {
           0,
           0,
           clampedWidth,
-          clampedHeight, // Destination rectangle on canvas
+          clampedHeight // Destination rectangle on canvas
         )
       }
       requestAnimationFrame(drawFrame)
@@ -982,114 +1059,150 @@ export default function CameraRecorder() {
   }, [cropArea, isFullscreen, isMirrored])
 
   // Manual blur function as fallback
-  const applyManualBlur = useCallback((imageData: ImageData, radius: number): ImageData => {
-    const { data, width, height } = imageData
-    const output = new ImageData(width, height)
-    const outputData = output.data
+  const applyManualBlur = useCallback(
+    (imageData: ImageData, radius: number): ImageData => {
+      const { data, width, height } = imageData
+      const output = new ImageData(width, height)
+      const outputData = output.data
 
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        let r = 0, g = 0, b = 0, a = 0
-        let count = 0
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          let r = 0,
+            g = 0,
+            b = 0,
+            a = 0
+          let count = 0
 
-        for (let dy = -radius; dy <= radius; dy++) {
-          for (let dx = -radius; dx <= radius; dx++) {
-            const nx = Math.max(0, Math.min(width - 1, x + dx))
-            const ny = Math.max(0, Math.min(height - 1, y + dy))
-            const i = (ny * width + nx) * 4
+          for (let dy = -radius; dy <= radius; dy++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+              const nx = Math.max(0, Math.min(width - 1, x + dx))
+              const ny = Math.max(0, Math.min(height - 1, y + dy))
+              const i = (ny * width + nx) * 4
 
-            r += data[i]
-            g += data[i + 1]
-            b += data[i + 2]
-            a += data[i + 3]
-            count++
+              r += data[i]
+              g += data[i + 1]
+              b += data[i + 2]
+              a += data[i + 3]
+              count++
+            }
           }
+
+          const i = (y * width + x) * 4
+          outputData[i] = r / count
+          outputData[i + 1] = g / count
+          outputData[i + 2] = b / count
+          outputData[i + 3] = a / count
         }
-
-        const i = (y * width + x) * 4
-        outputData[i] = r / count
-        outputData[i + 1] = g / count
-        outputData[i + 2] = b / count
-        outputData[i + 3] = a / count
       }
-    }
 
-    return output
-  }, [])
+      return output
+    },
+    []
+  )
 
   // Shared function to calculate effect area coordinates in video space
-  const calculateEffectAreaInVideoSpace = useCallback((canvasWidth: number, canvasHeight: number) => {
-    if (!videoRef.current || !videoContainerRef.current) {
-      return { x: 0, y: 0, width: canvasWidth, height: canvasHeight }
-    }
+  const calculateEffectAreaInVideoSpace = useCallback(
+    (canvasWidth: number, canvasHeight: number) => {
+      if (!videoRef.current || !videoContainerRef.current) {
+        return { x: 0, y: 0, width: canvasWidth, height: canvasHeight }
+      }
 
-    const video = videoRef.current
-    const videoWidth = video.videoWidth || 1280
-    const videoHeight = video.videoHeight || 720
+      const video = videoRef.current
+      const videoWidth = video.videoWidth || 1280
+      const videoHeight = video.videoHeight || 720
 
-    // Use the same logic as getVideoDisplayArea to ensure consistency
-    const videoArea = getVideoDisplayArea()
-    
-    // Convert effect crop area from container percentage to video coordinates
-    const effectStartX = effectCropArea.x * videoArea.containerWidth
-    const effectStartY = effectCropArea.y * videoArea.containerHeight
-    const effectWidth = effectCropArea.width * videoArea.containerWidth
-    const effectHeight = effectCropArea.height * videoArea.containerHeight
+      // Use the same logic as getVideoDisplayArea to ensure consistency
+      const videoArea = getVideoDisplayArea()
 
-    // Convert to video coordinate space
-    const videoEffectStartX = (effectStartX - videoArea.videoOffsetX) * (videoWidth / videoArea.displayedVideoWidth)
-    const videoEffectStartY = (effectStartY - videoArea.videoOffsetY) * (videoHeight / videoArea.displayedVideoHeight)
-    const videoEffectWidth = effectWidth * (videoWidth / videoArea.displayedVideoWidth)
-    const videoEffectHeight = effectHeight * (videoHeight / videoArea.displayedVideoHeight)
+      // Convert effect crop area from container percentage to video coordinates
+      const effectStartX = effectCropArea.x * videoArea.containerWidth
+      const effectStartY = effectCropArea.y * videoArea.containerHeight
+      const effectWidth = effectCropArea.width * videoArea.containerWidth
+      const effectHeight = effectCropArea.height * videoArea.containerHeight
 
-    // For screenshots, we need to scale to canvas dimensions if different from video dimensions
-    const scaleX = canvasWidth / videoWidth
-    const scaleY = canvasHeight / videoHeight
+      // Convert to video coordinate space
+      const videoEffectStartX =
+        (effectStartX - videoArea.videoOffsetX) *
+        (videoWidth / videoArea.displayedVideoWidth)
+      const videoEffectStartY =
+        (effectStartY - videoArea.videoOffsetY) *
+        (videoHeight / videoArea.displayedVideoHeight)
+      const videoEffectWidth =
+        effectWidth * (videoWidth / videoArea.displayedVideoWidth)
+      const videoEffectHeight =
+        effectHeight * (videoHeight / videoArea.displayedVideoHeight)
 
-    const clampedX = Math.max(0, Math.min(videoEffectStartX * scaleX, canvasWidth))
-    const clampedY = Math.max(0, Math.min(videoEffectStartY * scaleY, canvasHeight))
-    const clampedWidth = Math.max(1, Math.min(videoEffectWidth * scaleX, canvasWidth - clampedX))
-    const clampedHeight = Math.max(1, Math.min(videoEffectHeight * scaleY, canvasHeight - clampedY))
+      // For screenshots, we need to scale to canvas dimensions if different from video dimensions
+      const scaleX = canvasWidth / videoWidth
+      const scaleY = canvasHeight / videoHeight
 
-    return {
-      x: clampedX,
-      y: clampedY,
-      width: clampedWidth,
-      height: clampedHeight
-    }
-  }, [effectCropArea, getVideoDisplayArea])
+      const clampedX = Math.max(
+        0,
+        Math.min(videoEffectStartX * scaleX, canvasWidth)
+      )
+      const clampedY = Math.max(
+        0,
+        Math.min(videoEffectStartY * scaleY, canvasHeight)
+      )
+      const clampedWidth = Math.max(
+        1,
+        Math.min(videoEffectWidth * scaleX, canvasWidth - clampedX)
+      )
+      const clampedHeight = Math.max(
+        1,
+        Math.min(videoEffectHeight * scaleY, canvasHeight - clampedY)
+      )
+
+      return {
+        x: clampedX,
+        y: clampedY,
+        width: clampedWidth,
+        height: clampedHeight,
+      }
+    },
+    [effectCropArea, getVideoDisplayArea]
+  )
 
   // Create real-time effect preview overlay
   const updateEffectPreview = useCallback(() => {
-    if (!previewEffectCanvasRef.current || !videoRef.current || !videoContainerRef.current) return
-    
+    if (
+      !previewEffectCanvasRef.current ||
+      !videoRef.current ||
+      !videoContainerRef.current
+    )
+      return
+
     const canvas = previewEffectCanvasRef.current
     const video = videoRef.current
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
     // Only show effect preview in effect crop mode and when idle to reduce performance impact
-    if (!isEffectCropMode || videoEffect === ("none" as VideoEffect) || recordingState !== "idle") {
+    if (
+      !isEffectCropMode ||
+      videoEffect === ("none" as VideoEffect) ||
+      recordingState !== "idle"
+    ) {
       canvas.style.display = "none"
       return
     }
 
     canvas.style.display = "block"
-    
+
     // Get container dimensions
     const containerRect = videoContainerRef.current.getBoundingClientRect()
-    
+
     // Set canvas size to match container
     canvas.width = containerRect.width
     canvas.height = containerRect.height
-    
+
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
     // Effect crop mode - apply effect to selected area only
     // Use consistent coordinate calculation for video display area
     const videoArea = getVideoDisplayArea()
-    
+
     // Convert effect crop area to canvas coordinates (preview canvas matches container size)
     const effectStartX = effectCropArea.x * containerRect.width
     const effectStartY = effectCropArea.y * containerRect.height
@@ -1107,17 +1220,29 @@ export default function CameraRecorder() {
     // Calculate the source rectangle on the video using consistent logic
     const videoWidth = video.videoWidth || 1280
     const videoHeight = video.videoHeight || 720
-    
-    const videoEffectStartX = (effectStartX - videoArea.videoOffsetX) * (videoWidth / videoArea.displayedVideoWidth)
-    const videoEffectStartY = (effectStartY - videoArea.videoOffsetY) * (videoHeight / videoArea.displayedVideoHeight)
-    const videoEffectWidth = effectWidth * (videoWidth / videoArea.displayedVideoWidth)
-    const videoEffectHeight = effectHeight * (videoHeight / videoArea.displayedVideoHeight)
+
+    const videoEffectStartX =
+      (effectStartX - videoArea.videoOffsetX) *
+      (videoWidth / videoArea.displayedVideoWidth)
+    const videoEffectStartY =
+      (effectStartY - videoArea.videoOffsetY) *
+      (videoHeight / videoArea.displayedVideoHeight)
+    const videoEffectWidth =
+      effectWidth * (videoWidth / videoArea.displayedVideoWidth)
+    const videoEffectHeight =
+      effectHeight * (videoHeight / videoArea.displayedVideoHeight)
 
     // Clamp to video bounds
     const clampedX = Math.max(0, Math.min(videoEffectStartX, videoWidth))
     const clampedY = Math.max(0, Math.min(videoEffectStartY, videoHeight))
-    const clampedWidth = Math.max(1, Math.min(videoEffectWidth, videoWidth - clampedX))
-    const clampedHeight = Math.max(1, Math.min(videoEffectHeight, videoHeight - clampedY))
+    const clampedWidth = Math.max(
+      1,
+      Math.min(videoEffectWidth, videoWidth - clampedX)
+    )
+    const clampedHeight = Math.max(
+      1,
+      Math.min(videoEffectHeight, videoHeight - clampedY)
+    )
 
     // Draw the video section to the temporary canvas
     if (isMirrored) {
@@ -1125,22 +1250,34 @@ export default function CameraRecorder() {
       tempCtx.scale(-1, 1)
       tempCtx.drawImage(
         video,
-        clampedX, clampedY, clampedWidth, clampedHeight,
-        -effectWidth, 0, effectWidth, effectHeight
+        clampedX,
+        clampedY,
+        clampedWidth,
+        clampedHeight,
+        -effectWidth,
+        0,
+        effectWidth,
+        effectHeight
       )
       tempCtx.restore()
     } else {
       tempCtx.drawImage(
         video,
-        clampedX, clampedY, clampedWidth, clampedHeight,
-        0, 0, effectWidth, effectHeight
+        clampedX,
+        clampedY,
+        clampedWidth,
+        clampedHeight,
+        0,
+        0,
+        effectWidth,
+        effectHeight
       )
     }
 
     // Apply the effect
     if (videoEffect === "blur") {
       const blurAmount = effectIntensity * 2
-      
+
       try {
         // Method 1: Try CSS filter blur (most efficient)
         const blurCanvas = document.createElement("canvas")
@@ -1153,14 +1290,17 @@ export default function CameraRecorder() {
         // Apply blur using CSS filter
         blurCtx.filter = `blur(${blurAmount}px)`
         blurCtx.drawImage(tempCanvas, 0, 0)
-        
+
         // Clear the temp canvas and draw the blurred version
         tempCtx.clearRect(0, 0, effectWidth, effectHeight)
         tempCtx.drawImage(blurCanvas, 0, 0)
       } catch {
         // Fallback: Manual blur using multiple passes (less efficient but more compatible)
         const imageData = tempCtx.getImageData(0, 0, effectWidth, effectHeight)
-        const blurredData = applyManualBlur(imageData, Math.ceil(blurAmount / 2))
+        const blurredData = applyManualBlur(
+          imageData,
+          Math.ceil(blurAmount / 2)
+        )
         tempCtx.putImageData(blurredData, 0, 0)
       }
     } else if (videoEffect === "pixelate") {
@@ -1181,28 +1321,75 @@ export default function CameraRecorder() {
       tempCtx.imageSmoothingEnabled = false
 
       // Draw the image at reduced size
-      pixelCtx.drawImage(tempCanvas, 0, 0, effectWidth, effectHeight, 0, 0, scaledWidth, scaledHeight)
-      
+      pixelCtx.drawImage(
+        tempCanvas,
+        0,
+        0,
+        effectWidth,
+        effectHeight,
+        0,
+        0,
+        scaledWidth,
+        scaledHeight
+      )
+
       // Clear the temp canvas and draw the pixelated version back at full size
       tempCtx.clearRect(0, 0, effectWidth, effectHeight)
-      tempCtx.drawImage(pixelCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, effectWidth, effectHeight)
+      tempCtx.drawImage(
+        pixelCanvas,
+        0,
+        0,
+        scaledWidth,
+        scaledHeight,
+        0,
+        0,
+        effectWidth,
+        effectHeight
+      )
     }
 
     // Draw the processed area to the main canvas
-    ctx.drawImage(tempCanvas, 0, 0, effectWidth, effectHeight, effectStartX, effectStartY, effectWidth, effectHeight)
+    ctx.drawImage(
+      tempCanvas,
+      0,
+      0,
+      effectWidth,
+      effectHeight,
+      effectStartX,
+      effectStartY,
+      effectWidth,
+      effectHeight
+    )
 
     // Continue animation with reduced frame rate for better performance
-    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect) && recordingState === "idle") {
+    if (
+      isEffectCropMode &&
+      videoEffect !== ("none" as VideoEffect) &&
+      recordingState === "idle"
+    ) {
       // Limit to ~15 FPS for preview to reduce CPU usage
       setTimeout(() => {
-        previewEffectAnimationRef.current = requestAnimationFrame(updateEffectPreview)
+        previewEffectAnimationRef.current =
+          requestAnimationFrame(updateEffectPreview)
       }, 67) // ~15 FPS (1000ms / 15 ≈ 67ms)
     }
-  }, [isEffectCropMode, videoEffect, effectIntensity, effectCropArea, isMirrored, recordingState, applyManualBlur])
+  }, [
+    isEffectCropMode,
+    videoEffect,
+    effectIntensity,
+    effectCropArea,
+    isMirrored,
+    recordingState,
+    applyManualBlur,
+  ])
 
   // Start/stop effect preview animation
   useEffect(() => {
-    if (isEffectCropMode && videoEffect !== ("none" as VideoEffect) && recordingState === "idle") {
+    if (
+      isEffectCropMode &&
+      videoEffect !== ("none" as VideoEffect) &&
+      recordingState === "idle"
+    ) {
       // Cancel any existing animation before starting a new one
       if (previewEffectAnimationRef.current) {
         cancelAnimationFrame(previewEffectAnimationRef.current)
@@ -1223,13 +1410,18 @@ export default function CameraRecorder() {
         previewEffectAnimationRef.current = null
       }
     }
-  }, [isEffectCropMode, videoEffect, effectIntensity, recordingState, updateEffectPreview])
-
-
+  }, [
+    isEffectCropMode,
+    videoEffect,
+    effectIntensity,
+    recordingState,
+    updateEffectPreview,
+  ])
 
   // Create effect stream with blur or pixelation (with optional crop area)
   const createEffectStream = useCallback(() => {
-    if (!effectCanvasRef.current || !videoRef.current || !streamRef.current) return null
+    if (!effectCanvasRef.current || !videoRef.current || !streamRef.current)
+      return null
 
     const canvas = effectCanvasRef.current
     const video = videoRef.current
@@ -1257,7 +1449,10 @@ export default function CameraRecorder() {
       // Apply effect to specific area if effect crop mode is enabled
       if (isEffectCropMode && videoEffect !== ("none" as VideoEffect)) {
         // Use consistent coordinate calculation
-        const effectArea = calculateEffectAreaInVideoSpace(canvas.width, canvas.height)
+        const effectArea = calculateEffectAreaInVideoSpace(
+          canvas.width,
+          canvas.height
+        )
         const clampedX = effectArea.x
         const clampedY = effectArea.y
         const clampedWidth = effectArea.width
@@ -1272,7 +1467,12 @@ export default function CameraRecorder() {
         tempCanvas.height = clampedHeight
 
         // Extract the area to be affected from the main canvas (which already has the video drawn)
-        const imageData = ctx.getImageData(clampedX, clampedY, clampedWidth, clampedHeight)
+        const imageData = ctx.getImageData(
+          clampedX,
+          clampedY,
+          clampedWidth,
+          clampedHeight
+        )
         tempCtx.putImageData(imageData, 0, 0)
 
         // Apply effect to the temporary canvas
@@ -1284,7 +1484,10 @@ export default function CameraRecorder() {
         } else if (videoEffect === "pixelate") {
           const pixelSize = Math.max(1, effectIntensity * 3)
           const scaledWidth = Math.max(1, Math.floor(clampedWidth / pixelSize))
-          const scaledHeight = Math.max(1, Math.floor(clampedHeight / pixelSize))
+          const scaledHeight = Math.max(
+            1,
+            Math.floor(clampedHeight / pixelSize)
+          )
 
           // Create a smaller version for pixelation
           const pixelCanvas = document.createElement("canvas")
@@ -1299,19 +1502,49 @@ export default function CameraRecorder() {
           tempCtx.imageSmoothingEnabled = false
 
           // Draw the area at reduced size
-          pixelCtx.drawImage(tempCanvas, 0, 0, clampedWidth, clampedHeight, 0, 0, scaledWidth, scaledHeight)
+          pixelCtx.drawImage(
+            tempCanvas,
+            0,
+            0,
+            clampedWidth,
+            clampedHeight,
+            0,
+            0,
+            scaledWidth,
+            scaledHeight
+          )
 
           // Clear the temp canvas and draw the pixelated version back at full size
           tempCtx.clearRect(0, 0, clampedWidth, clampedHeight)
-          tempCtx.drawImage(pixelCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, clampedWidth, clampedHeight)
+          tempCtx.drawImage(
+            pixelCanvas,
+            0,
+            0,
+            scaledWidth,
+            scaledHeight,
+            0,
+            0,
+            clampedWidth,
+            clampedHeight
+          )
         }
 
         // Draw the affected area back to the main canvas
-        ctx.drawImage(tempCanvas, 0, 0, clampedWidth, clampedHeight, clampedX, clampedY, clampedWidth, clampedHeight)
+        ctx.drawImage(
+          tempCanvas,
+          0,
+          0,
+          clampedWidth,
+          clampedHeight,
+          clampedX,
+          clampedY,
+          clampedWidth,
+          clampedHeight
+        )
       } else if (videoEffect !== ("none" as VideoEffect) && !isEffectCropMode) {
         // Apply effect to entire video - need to redraw the video with effect
         ctx.clearRect(0, 0, canvas.width, canvas.height)
-        
+
         if (videoEffect === "blur") {
           const blurAmount = effectIntensity * 2
           ctx.filter = `blur(${blurAmount}px)`
@@ -1324,13 +1557,16 @@ export default function CameraRecorder() {
           } else {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
           }
-          
+
           // Reset filter for future draws
-          ctx.filter = 'none'
+          ctx.filter = "none"
         } else if (videoEffect === "pixelate") {
           const pixelSize = Math.max(1, effectIntensity * 3)
           const scaledWidth = Math.max(1, Math.floor(canvas.width / pixelSize))
-          const scaledHeight = Math.max(1, Math.floor(canvas.height / pixelSize))
+          const scaledHeight = Math.max(
+            1,
+            Math.floor(canvas.height / pixelSize)
+          )
 
           // Create a temporary smaller canvas for pixelation
           const pixelCanvas = document.createElement("canvas")
@@ -1345,7 +1581,13 @@ export default function CameraRecorder() {
           if (isMirrored) {
             pixelCtx.save()
             pixelCtx.scale(-1, 1)
-            pixelCtx.drawImage(video, -scaledWidth, 0, scaledWidth, scaledHeight)
+            pixelCtx.drawImage(
+              video,
+              -scaledWidth,
+              0,
+              scaledWidth,
+              scaledHeight
+            )
             pixelCtx.restore()
           } else {
             pixelCtx.drawImage(video, 0, 0, scaledWidth, scaledHeight)
@@ -1353,7 +1595,17 @@ export default function CameraRecorder() {
 
           // Draw the small canvas back to main canvas at full size for pixelated effect
           ctx.imageSmoothingEnabled = false
-          ctx.drawImage(pixelCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, canvas.width, canvas.height)
+          ctx.drawImage(
+            pixelCanvas,
+            0,
+            0,
+            scaledWidth,
+            scaledHeight,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+          )
           ctx.imageSmoothingEnabled = true
         }
       }
@@ -1372,7 +1624,15 @@ export default function CameraRecorder() {
     }
 
     return canvasStream
-  }, [videoEffect, effectIntensity, isMirrored, isEffectCropMode, effectCropArea, isFullscreen, calculateEffectAreaInVideoSpace])
+  }, [
+    videoEffect,
+    effectIntensity,
+    isMirrored,
+    isEffectCropMode,
+    effectCropArea,
+    isFullscreen,
+    calculateEffectAreaInVideoSpace,
+  ])
 
   // Toggle crop mode
   const toggleCropMode = useCallback(() => {
@@ -1409,13 +1669,13 @@ export default function CameraRecorder() {
         video: {
           width: { ideal: 1920, max: 1920 },
           height: { ideal: 1080, max: 1080 },
-          frameRate: { ideal: 30, max: 30 }
+          frameRate: { ideal: 30, max: 30 },
         },
-        audio: true
+        audio: true,
       })
 
       setScreenStream(displayStream)
-      
+
       if (screenVideoRef.current) {
         screenVideoRef.current.srcObject = displayStream
       }
@@ -1426,17 +1686,18 @@ export default function CameraRecorder() {
         setRecordingMode("webcam")
         setScreenError("Screen sharing stopped")
       }
-
     } catch (error) {
       console.error("Error starting screen capture:", error)
-      setScreenError("Unable to start screen capture. Please check permissions.")
+      setScreenError(
+        "Unable to start screen capture. Please check permissions."
+      )
       setRecordingMode("webcam")
     }
   }, [])
 
   const stopScreenCapture = useCallback(() => {
     if (screenStream) {
-      screenStream.getTracks().forEach(track => track.stop())
+      screenStream.getTracks().forEach((track) => track.stop())
       setScreenStream(null)
     }
     setScreenError(null)
@@ -1444,8 +1705,14 @@ export default function CameraRecorder() {
 
   // PIP Canvas composition
   const updatePipCanvas = useCallback(() => {
-    if (!pipCanvasRef.current || !screenVideoRef.current || !videoRef.current || recordingMode !== "pip") return
-    
+    if (
+      !pipCanvasRef.current ||
+      !screenVideoRef.current ||
+      !videoRef.current ||
+      recordingMode !== "pip"
+    )
+      return
+
     const canvas = pipCanvasRef.current
     const ctx = canvas.getContext("2d")
     if (!ctx) return
@@ -1468,12 +1735,12 @@ export default function CameraRecorder() {
     // Calculate webcam overlay position and size (centered positioning)
     const pipW = (pipPosition.width / 100) * screenWidth
     const pipH = (pipPosition.height / 100) * screenHeight
-    const pipX = ((pipPosition.x / 100) * screenWidth) - (pipW / 2)
-    const pipY = ((pipPosition.y / 100) * screenHeight) - (pipH / 2)
+    const pipX = (pipPosition.x / 100) * screenWidth - pipW / 2
+    const pipY = (pipPosition.y / 100) * screenHeight - pipH / 2
 
     // Draw webcam overlay with rounded corners and border
     ctx.save()
-    
+
     // Create rounded rectangle path
     const radius = 8
     ctx.beginPath()
@@ -1493,7 +1760,7 @@ export default function CameraRecorder() {
     ctx.restore()
 
     // Draw border around webcam
-    ctx.strokeStyle = '#ffffff'
+    ctx.strokeStyle = "#ffffff"
     ctx.lineWidth = 3
     ctx.beginPath()
     ctx.roundRect(pipX, pipY, pipW, pipH, radius)
@@ -1563,64 +1830,80 @@ export default function CameraRecorder() {
   }, [screenStream, startScreenCapture])
 
   // PIP position controls
-  const handlePipMouseDown = useCallback((e: React.MouseEvent, action: "drag" | "resize") => {
-    if (!videoContainerRef.current) return
+  const handlePipMouseDown = useCallback(
+    (e: React.MouseEvent, action: "drag" | "resize") => {
+      if (!videoContainerRef.current) return
 
-    e.preventDefault()
-    e.stopPropagation()
+      e.preventDefault()
+      e.stopPropagation()
 
-    const rect = videoContainerRef.current.getBoundingClientRect()
-    const relativeX = ((e.clientX - rect.left) / rect.width) * 100
-    const relativeY = ((e.clientY - rect.top) / rect.height) * 100
-
-    setPipDragStart({ x: relativeX, y: relativeY })
-
-    if (action === "drag") {
-      setIsPipDragging(true)
-    } else {
-      setIsPipResizing(true)
-    }
-  }, [])
-
-  const handlePipMouseMove = useCallback((e: MouseEvent) => {
-    if (!videoContainerRef.current || (!isPipDragging && !isPipResizing)) return
-
-    const rect = videoContainerRef.current.getBoundingClientRect()
-    const relativeX = ((e.clientX - rect.left) / rect.width) * 100
-    const relativeY = ((e.clientY - rect.top) / rect.height) * 100
-
-    if (isPipDragging) {
-      const deltaX = relativeX - pipDragStart.x
-      const deltaY = relativeY - pipDragStart.y
-
-      setPipPosition(prev => {
-        const halfWidth = prev.width / 2
-        const halfHeight = prev.height / 2
-        return {
-          ...prev,
-          x: Math.max(halfWidth, Math.min(100 - halfWidth, prev.x + deltaX)),
-          y: Math.max(halfHeight, Math.min(100 - halfHeight, prev.y + deltaY))
-        }
-      })
+      const rect = videoContainerRef.current.getBoundingClientRect()
+      const relativeX = ((e.clientX - rect.left) / rect.width) * 100
+      const relativeY = ((e.clientY - rect.top) / rect.height) * 100
 
       setPipDragStart({ x: relativeX, y: relativeY })
-    } else if (isPipResizing) {
-      setPipPosition(prev => {
-        const centerX = prev.x
-        const centerY = prev.y
-        
-        // Calculate new size based on distance from center
-        const newWidth = Math.max(15, Math.min(40, Math.abs(relativeX - centerX) * 2))
-        const newHeight = Math.max(15, Math.min(40, Math.abs(relativeY - centerY) * 2))
-        
-        return {
-          ...prev,
-          width: newWidth,
-          height: newHeight
-        }
-      })
-    }
-  }, [isPipDragging, isPipResizing, pipDragStart])
+
+      if (action === "drag") {
+        setIsPipDragging(true)
+      } else {
+        setIsPipResizing(true)
+      }
+    },
+    []
+  )
+
+  const handlePipMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!videoContainerRef.current || (!isPipDragging && !isPipResizing))
+        return
+
+      const rect = videoContainerRef.current.getBoundingClientRect()
+      const relativeX = ((e.clientX - rect.left) / rect.width) * 100
+      const relativeY = ((e.clientY - rect.top) / rect.height) * 100
+
+      if (isPipDragging) {
+        const deltaX = relativeX - pipDragStart.x
+        const deltaY = relativeY - pipDragStart.y
+
+        setPipPosition((prev) => {
+          const halfWidth = prev.width / 2
+          const halfHeight = prev.height / 2
+          return {
+            ...prev,
+            x: Math.max(halfWidth, Math.min(100 - halfWidth, prev.x + deltaX)),
+            y: Math.max(
+              halfHeight,
+              Math.min(100 - halfHeight, prev.y + deltaY)
+            ),
+          }
+        })
+
+        setPipDragStart({ x: relativeX, y: relativeY })
+      } else if (isPipResizing) {
+        setPipPosition((prev) => {
+          const centerX = prev.x
+          const centerY = prev.y
+
+          // Calculate new size based on distance from center
+          const newWidth = Math.max(
+            15,
+            Math.min(40, Math.abs(relativeX - centerX) * 2)
+          )
+          const newHeight = Math.max(
+            15,
+            Math.min(40, Math.abs(relativeY - centerY) * 2)
+          )
+
+          return {
+            ...prev,
+            width: newWidth,
+            height: newHeight,
+          }
+        })
+      }
+    },
+    [isPipDragging, isPipResizing, pipDragStart]
+  )
 
   const handlePipMouseUp = useCallback(() => {
     setIsPipDragging(false)
@@ -1639,74 +1922,69 @@ export default function CameraRecorder() {
     }
   }, [isPipDragging, isPipResizing, handlePipMouseMove, handlePipMouseUp])
 
-
-
-
-
-  
-
-
-
   // Handle crop area mouse events
-  const handleCropMouseDown = useCallback((e: React.MouseEvent, handle?: string) => {
-    if (!videoContainerRef.current || !videoRef.current) return
+  const handleCropMouseDown = useCallback(
+    (e: React.MouseEvent, handle?: string) => {
+      if (!videoContainerRef.current || !videoRef.current) return
 
-    e.preventDefault()
-    e.stopPropagation()
+      e.preventDefault()
+      e.stopPropagation()
 
-    // Use the correct element bounds based on fullscreen mode
-    const rect = isFullscreen 
-      ? videoRef.current.getBoundingClientRect()
-      : videoContainerRef.current.getBoundingClientRect()
-    const videoArea = getVideoDisplayArea()
-    
-    // Convert mouse coordinates relative to the actual video display area
-    // const relativeX = (e.clientX - rect.left - videoArea.videoOffsetX) / videoArea.displayedVideoWidth
-    // const relativeY = (e.clientY - rect.top - videoArea.videoOffsetY) / videoArea.displayedVideoHeight
+      // Mouse handling uses video bounds when coordinate conversion is enabled
+      // const rect = isFullscreen
+      //   ? videoRef.current.getBoundingClientRect()
+      //   : videoContainerRef.current.getBoundingClientRect()
+      // const videoArea = getVideoDisplayArea()
 
-    setDragStart({ x: e.clientX, y: e.clientY })
+      setDragStart({ x: e.clientX, y: e.clientY })
 
-    if (handle) {
-      setIsResizing(true)
-      setResizeHandle(handle)
-    } else {
-      setIsDragging(true)
-    }
-  }, [getVideoDisplayArea, isFullscreen])
+      if (handle) {
+        setIsResizing(true)
+        setResizeHandle(handle)
+      } else {
+        setIsDragging(true)
+      }
+    },
+    [getVideoDisplayArea, isFullscreen]
+  )
 
   // Handle effect crop area mouse events
-  const handleEffectCropMouseDown = useCallback((e: React.MouseEvent, handle?: string) => {
-    if (!videoContainerRef.current || !videoRef.current) return
+  const handleEffectCropMouseDown = useCallback(
+    (e: React.MouseEvent, handle?: string) => {
+      if (!videoContainerRef.current || !videoRef.current) return
 
-    e.preventDefault()
-    e.stopPropagation()
+      e.preventDefault()
+      e.stopPropagation()
 
-    // Use the correct element bounds based on fullscreen mode
-    const rect = isFullscreen 
-      ? videoRef.current.getBoundingClientRect()
-      : videoContainerRef.current.getBoundingClientRect()
-    const videoArea = getVideoDisplayArea()
-    
-    // Convert mouse coordinates relative to the actual video display area
-    // const relativeX = (e.clientX - rect.left - videoArea.videoOffsetX) / videoArea.displayedVideoWidth
-    // const relativeY = (e.clientY - rect.top - videoArea.videoOffsetY) / videoArea.displayedVideoHeight
+      // Mouse handling uses video bounds when coordinate conversion is enabled
+      // const rect = isFullscreen
+      //   ? videoRef.current.getBoundingClientRect()
+      //   : videoContainerRef.current.getBoundingClientRect()
+      // const videoArea = getVideoDisplayArea()
 
-    setEffectDragStart({ x: e.clientX, y: e.clientY })
+      setEffectDragStart({ x: e.clientX, y: e.clientY })
 
-    if (handle) {
-      setIsEffectResizing(true)
-      setEffectResizeHandle(handle)
-    } else {
-      setIsEffectDragging(true)
-    }
-  }, [getVideoDisplayArea, isFullscreen])
+      if (handle) {
+        setIsEffectResizing(true)
+        setEffectResizeHandle(handle)
+      } else {
+        setIsEffectDragging(true)
+      }
+    },
+    [getVideoDisplayArea, isFullscreen]
+  )
 
   const handleCropMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!videoContainerRef.current || !videoRef.current || (!isDragging && !isResizing && !isEffectDragging && !isEffectResizing)) return
+      if (
+        !videoContainerRef.current ||
+        !videoRef.current ||
+        (!isDragging && !isResizing && !isEffectDragging && !isEffectResizing)
+      )
+        return
 
       // Use the correct element bounds based on fullscreen mode
-      // const rect = isFullscreen 
+      // const rect = isFullscreen
       //   ? videoRef.current.getBoundingClientRect()
       //   : videoContainerRef.current.getBoundingClientRect()
       const videoArea = getVideoDisplayArea()
@@ -1714,7 +1992,8 @@ export default function CameraRecorder() {
       // Handle regular crop area
       if (isDragging || isResizing) {
         const deltaX = (e.clientX - dragStart.x) / videoArea.displayedVideoWidth
-        const deltaY = (e.clientY - dragStart.y) / videoArea.displayedVideoHeight
+        const deltaY =
+          (e.clientY - dragStart.y) / videoArea.displayedVideoHeight
 
         if (isDragging) {
           setCropArea((prev) => ({
@@ -1734,18 +2013,30 @@ export default function CameraRecorder() {
                 newArea.y = Math.max(0, prev.y + deltaY)
                 break
               case "ne":
-                newArea.width = Math.max(0.1, Math.min(1 - prev.x, prev.width + deltaX))
+                newArea.width = Math.max(
+                  0.1,
+                  Math.min(1 - prev.x, prev.width + deltaX)
+                )
                 newArea.height = Math.max(0.1, prev.height - deltaY)
                 newArea.y = Math.max(0, prev.y + deltaY)
                 break
               case "sw":
                 newArea.width = Math.max(0.1, prev.width - deltaX)
-                newArea.height = Math.max(0.1, Math.min(1 - prev.y, prev.height + deltaY))
+                newArea.height = Math.max(
+                  0.1,
+                  Math.min(1 - prev.y, prev.height + deltaY)
+                )
                 newArea.x = Math.max(0, prev.x + deltaX)
                 break
               case "se":
-                newArea.width = Math.max(0.1, Math.min(1 - prev.x, prev.width + deltaX))
-                newArea.height = Math.max(0.1, Math.min(1 - prev.y, prev.height + deltaY))
+                newArea.width = Math.max(
+                  0.1,
+                  Math.min(1 - prev.x, prev.width + deltaX)
+                )
+                newArea.height = Math.max(
+                  0.1,
+                  Math.min(1 - prev.y, prev.height + deltaY)
+                )
                 break
             }
 
@@ -1758,8 +2049,10 @@ export default function CameraRecorder() {
 
       // Handle effect crop area
       if (isEffectDragging || isEffectResizing) {
-        const deltaX = (e.clientX - effectDragStart.x) / videoArea.displayedVideoWidth
-        const deltaY = (e.clientY - effectDragStart.y) / videoArea.displayedVideoHeight
+        const deltaX =
+          (e.clientX - effectDragStart.x) / videoArea.displayedVideoWidth
+        const deltaY =
+          (e.clientY - effectDragStart.y) / videoArea.displayedVideoHeight
 
         if (isEffectDragging) {
           setEffectCropArea((prev) => ({
@@ -1779,18 +2072,30 @@ export default function CameraRecorder() {
                 newArea.y = Math.max(0, prev.y + deltaY)
                 break
               case "ne":
-                newArea.width = Math.max(0.1, Math.min(1 - prev.x, prev.width + deltaX))
+                newArea.width = Math.max(
+                  0.1,
+                  Math.min(1 - prev.x, prev.width + deltaX)
+                )
                 newArea.height = Math.max(0.1, prev.height - deltaY)
                 newArea.y = Math.max(0, prev.y + deltaY)
                 break
               case "sw":
                 newArea.width = Math.max(0.1, prev.width - deltaX)
-                newArea.height = Math.max(0.1, Math.min(1 - prev.y, prev.height + deltaY))
+                newArea.height = Math.max(
+                  0.1,
+                  Math.min(1 - prev.y, prev.height + deltaY)
+                )
                 newArea.x = Math.max(0, prev.x + deltaX)
                 break
               case "se":
-                newArea.width = Math.max(0.1, Math.min(1 - prev.x, prev.width + deltaX))
-                newArea.height = Math.max(0.1, Math.min(1 - prev.y, prev.height + deltaY))
+                newArea.width = Math.max(
+                  0.1,
+                  Math.min(1 - prev.x, prev.width + deltaX)
+                )
+                newArea.height = Math.max(
+                  0.1,
+                  Math.min(1 - prev.y, prev.height + deltaY)
+                )
                 break
             }
 
@@ -1812,7 +2117,7 @@ export default function CameraRecorder() {
       effectResizeHandle,
       getVideoDisplayArea,
       isFullscreen,
-    ],
+    ]
   )
 
   const handleCropMouseUp = useCallback(() => {
@@ -1826,7 +2131,10 @@ export default function CameraRecorder() {
 
   // Add mouse event listeners for crop functionality
   useEffect(() => {
-    if ((isCropMode && (isDragging || isResizing)) || (isEffectCropMode && (isEffectDragging || isEffectResizing))) {
+    if (
+      (isCropMode && (isDragging || isResizing)) ||
+      (isEffectCropMode && (isEffectDragging || isEffectResizing))
+    ) {
       document.addEventListener("mousemove", handleCropMouseMove)
       document.addEventListener("mouseup", handleCropMouseUp)
       return () => {
@@ -1853,7 +2161,7 @@ export default function CameraRecorder() {
         setIsScreenshotModalOpen(true)
       }
     },
-    [screenshots.length],
+    [screenshots.length]
   )
 
   const closeScreenshotModal = useCallback(() => {
@@ -1870,164 +2178,283 @@ export default function CameraRecorder() {
         }
       })
     },
-    [screenshots.length],
+    [screenshots.length]
   )
 
   // Apply effects to screenshot canvas
-  const applyEffectToScreenshot = useCallback((ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, mode: "crop" | "full") => {
-    if (!isEffectCropMode && mode === "full") {
-      // Apply effect to entire screenshot when not in effect crop mode
+  const applyEffectToScreenshot = useCallback(
+    (
+      ctx: CanvasRenderingContext2D,
+      canvas: HTMLCanvasElement,
+      mode: "crop" | "full"
+    ) => {
+      if (!isEffectCropMode && mode === "full") {
+        // Apply effect to entire screenshot when not in effect crop mode
+        if (videoEffect === "blur") {
+          const blurAmount = effectIntensity * 2
+          try {
+            ctx.filter = `blur(${blurAmount}px)`
+            ctx.drawImage(canvas, 0, 0)
+            ctx.filter = "none"
+          } catch {
+            // Fallback to manual blur
+            const imageData = ctx.getImageData(
+              0,
+              0,
+              canvas.width,
+              canvas.height
+            )
+            const blurredData = applyManualBlur(
+              imageData,
+              Math.ceil(blurAmount / 2)
+            )
+            ctx.putImageData(blurredData, 0, 0)
+          }
+        } else if (videoEffect === "pixelate") {
+          const pixelSize = Math.max(2, effectIntensity * 4)
+          const scaledWidth = Math.max(1, Math.floor(canvas.width / pixelSize))
+          const scaledHeight = Math.max(
+            1,
+            Math.floor(canvas.height / pixelSize)
+          )
+
+          // Create a temporary canvas to hold the original image
+          const originalCanvas = document.createElement("canvas")
+          const originalCtx = originalCanvas.getContext("2d")
+          if (!originalCtx) return
+
+          originalCanvas.width = canvas.width
+          originalCanvas.height = canvas.height
+          originalCtx.drawImage(canvas, 0, 0)
+
+          // Create pixelation canvas
+          const pixelCanvas = document.createElement("canvas")
+          const pixelCtx = pixelCanvas.getContext("2d")
+          if (pixelCtx) {
+            pixelCanvas.width = scaledWidth
+            pixelCanvas.height = scaledHeight
+            pixelCtx.imageSmoothingEnabled = false
+
+            // Draw original to small canvas
+            pixelCtx.drawImage(
+              originalCanvas,
+              0,
+              0,
+              canvas.width,
+              canvas.height,
+              0,
+              0,
+              scaledWidth,
+              scaledHeight
+            )
+
+            // Clear main canvas and draw pixelated version back at full size
+            ctx.imageSmoothingEnabled = false
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            ctx.drawImage(
+              pixelCanvas,
+              0,
+              0,
+              scaledWidth,
+              scaledHeight,
+              0,
+              0,
+              canvas.width,
+              canvas.height
+            )
+            ctx.imageSmoothingEnabled = true
+          }
+        }
+        return
+      }
+
+      if (!isEffectCropMode) return
+
+      // Calculate effect area using consistent coordinate system
+      const effectAreaInCanvas =
+        mode === "crop"
+          ? { x: 0, y: 0, width: canvas.width, height: canvas.height } // For crop mode, apply to whole cropped area
+          : calculateEffectAreaInVideoSpace(canvas.width, canvas.height) // For full mode, use calculated area
+
+      // Extract the effect area
+      const imageData = ctx.getImageData(
+        effectAreaInCanvas.x,
+        effectAreaInCanvas.y,
+        effectAreaInCanvas.width,
+        effectAreaInCanvas.height
+      )
+
       if (videoEffect === "blur") {
         const blurAmount = effectIntensity * 2
         try {
-          ctx.filter = `blur(${blurAmount}px)`
-          ctx.drawImage(canvas, 0, 0)
-          ctx.filter = 'none'
+          // Create temporary canvas for blur effect
+          const tempCanvas = document.createElement("canvas")
+          const tempCtx = tempCanvas.getContext("2d")
+          if (tempCtx) {
+            tempCanvas.width = effectAreaInCanvas.width
+            tempCanvas.height = effectAreaInCanvas.height
+            tempCtx.putImageData(imageData, 0, 0)
+            tempCtx.filter = `blur(${blurAmount}px)`
+            tempCtx.drawImage(tempCanvas, 0, 0)
+
+            // Draw the blurred area back to the main canvas
+            ctx.drawImage(
+              tempCanvas,
+              0,
+              0,
+              effectAreaInCanvas.width,
+              effectAreaInCanvas.height,
+              effectAreaInCanvas.x,
+              effectAreaInCanvas.y,
+              effectAreaInCanvas.width,
+              effectAreaInCanvas.height
+            )
+          }
         } catch {
           // Fallback to manual blur
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-          const blurredData = applyManualBlur(imageData, Math.ceil(blurAmount / 2))
-          ctx.putImageData(blurredData, 0, 0)
+          const blurredData = applyManualBlur(
+            imageData,
+            Math.ceil(blurAmount / 2)
+          )
+          ctx.putImageData(
+            blurredData,
+            effectAreaInCanvas.x,
+            effectAreaInCanvas.y
+          )
         }
       } else if (videoEffect === "pixelate") {
         const pixelSize = Math.max(2, effectIntensity * 4)
-        const scaledWidth = Math.max(1, Math.floor(canvas.width / pixelSize))
-        const scaledHeight = Math.max(1, Math.floor(canvas.height / pixelSize))
+        const scaledWidth = Math.max(
+          1,
+          Math.floor(effectAreaInCanvas.width / pixelSize)
+        )
+        const scaledHeight = Math.max(
+          1,
+          Math.floor(effectAreaInCanvas.height / pixelSize)
+        )
 
-        // Create a temporary canvas to hold the original image
-        const originalCanvas = document.createElement("canvas")
-        const originalCtx = originalCanvas.getContext("2d")
-        if (!originalCtx) return
-        
-        originalCanvas.width = canvas.width
-        originalCanvas.height = canvas.height
-        originalCtx.drawImage(canvas, 0, 0)
-
-        // Create pixelation canvas
         const pixelCanvas = document.createElement("canvas")
         const pixelCtx = pixelCanvas.getContext("2d")
         if (pixelCtx) {
           pixelCanvas.width = scaledWidth
           pixelCanvas.height = scaledHeight
           pixelCtx.imageSmoothingEnabled = false
-          
-          // Draw original to small canvas
-          pixelCtx.drawImage(originalCanvas, 0, 0, canvas.width, canvas.height, 0, 0, scaledWidth, scaledHeight)
-          
-          // Clear main canvas and draw pixelated version back at full size
-          ctx.imageSmoothingEnabled = false
-          ctx.clearRect(0, 0, canvas.width, canvas.height)
-          ctx.drawImage(pixelCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, canvas.width, canvas.height)
-          ctx.imageSmoothingEnabled = true
+
+          // Create temp canvas with original effect area
+          const tempCanvas = document.createElement("canvas")
+          const tempCtx = tempCanvas.getContext("2d")
+          if (tempCtx) {
+            tempCanvas.width = effectAreaInCanvas.width
+            tempCanvas.height = effectAreaInCanvas.height
+            tempCtx.putImageData(imageData, 0, 0)
+
+            // Draw at reduced size for pixelation
+            pixelCtx.drawImage(
+              tempCanvas,
+              0,
+              0,
+              effectAreaInCanvas.width,
+              effectAreaInCanvas.height,
+              0,
+              0,
+              scaledWidth,
+              scaledHeight
+            )
+
+            // Draw back at full size
+            tempCtx.imageSmoothingEnabled = false
+            tempCtx.clearRect(
+              0,
+              0,
+              effectAreaInCanvas.width,
+              effectAreaInCanvas.height
+            )
+            tempCtx.drawImage(
+              pixelCanvas,
+              0,
+              0,
+              scaledWidth,
+              scaledHeight,
+              0,
+              0,
+              effectAreaInCanvas.width,
+              effectAreaInCanvas.height
+            )
+
+            // Draw the pixelated area back to the main canvas
+            ctx.drawImage(
+              tempCanvas,
+              0,
+              0,
+              effectAreaInCanvas.width,
+              effectAreaInCanvas.height,
+              effectAreaInCanvas.x,
+              effectAreaInCanvas.y,
+              effectAreaInCanvas.width,
+              effectAreaInCanvas.height
+            )
+          }
         }
       }
-      return
-    }
-
-    if (!isEffectCropMode) return
-
-    // Calculate effect area using consistent coordinate system
-    const effectAreaInCanvas = mode === "crop" 
-      ? { x: 0, y: 0, width: canvas.width, height: canvas.height } // For crop mode, apply to whole cropped area
-      : calculateEffectAreaInVideoSpace(canvas.width, canvas.height) // For full mode, use calculated area
-
-    // Extract the effect area
-    const imageData = ctx.getImageData(effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
-
-    if (videoEffect === "blur") {
-      const blurAmount = effectIntensity * 2
-      try {
-        // Create temporary canvas for blur effect
-        const tempCanvas = document.createElement("canvas")
-        const tempCtx = tempCanvas.getContext("2d")
-        if (tempCtx) {
-          tempCanvas.width = effectAreaInCanvas.width
-          tempCanvas.height = effectAreaInCanvas.height
-          tempCtx.putImageData(imageData, 0, 0)
-          tempCtx.filter = `blur(${blurAmount}px)`
-          tempCtx.drawImage(tempCanvas, 0, 0)
-          
-          // Draw the blurred area back to the main canvas
-          ctx.drawImage(tempCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, 
-                       effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
-        }
-      } catch {
-        // Fallback to manual blur
-        const blurredData = applyManualBlur(imageData, Math.ceil(blurAmount / 2))
-        ctx.putImageData(blurredData, effectAreaInCanvas.x, effectAreaInCanvas.y)
-      }
-    } else if (videoEffect === "pixelate") {
-      const pixelSize = Math.max(2, effectIntensity * 4)
-      const scaledWidth = Math.max(1, Math.floor(effectAreaInCanvas.width / pixelSize))
-      const scaledHeight = Math.max(1, Math.floor(effectAreaInCanvas.height / pixelSize))
-
-      const pixelCanvas = document.createElement("canvas")
-      const pixelCtx = pixelCanvas.getContext("2d")
-      if (pixelCtx) {
-        pixelCanvas.width = scaledWidth
-        pixelCanvas.height = scaledHeight
-        pixelCtx.imageSmoothingEnabled = false
-
-        // Create temp canvas with original effect area
-        const tempCanvas = document.createElement("canvas")
-        const tempCtx = tempCanvas.getContext("2d")
-        if (tempCtx) {
-          tempCanvas.width = effectAreaInCanvas.width
-          tempCanvas.height = effectAreaInCanvas.height
-          tempCtx.putImageData(imageData, 0, 0)
-          
-          // Draw at reduced size for pixelation
-          pixelCtx.drawImage(tempCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, 0, 0, scaledWidth, scaledHeight)
-
-          // Draw back at full size
-          tempCtx.imageSmoothingEnabled = false
-          tempCtx.clearRect(0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height)
-          tempCtx.drawImage(pixelCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height)
-          
-          // Draw the pixelated area back to the main canvas
-          ctx.drawImage(tempCanvas, 0, 0, effectAreaInCanvas.width, effectAreaInCanvas.height, 
-                       effectAreaInCanvas.x, effectAreaInCanvas.y, effectAreaInCanvas.width, effectAreaInCanvas.height)
-        }
-      }
-    }
-  }, [videoEffect, effectIntensity, isEffectCropMode, calculateEffectAreaInVideoSpace, applyManualBlur])
+    },
+    [
+      videoEffect,
+      effectIntensity,
+      isEffectCropMode,
+      calculateEffectAreaInVideoSpace,
+      applyManualBlur,
+    ]
+  )
 
   // Take screenshot (with crop if enabled and timer support)
   const takeScreenshot = useCallback(
     async (withTimer = true) => {
-      console.log('📸 takeScreenshot called:', { withTimer, isTimerActive, isCapturingScreenshot, screenshotTimer })
-      
-      if (!videoRef.current || !screenshotCanvasRef.current || recordingState !== "idle") {
-        console.log('📸 Early return:', { hasVideo: !!videoRef.current, hasCanvas: !!screenshotCanvasRef.current, recordingState })
+      console.log("📸 takeScreenshot called:", {
+        withTimer,
+        isTimerActive,
+        isCapturingScreenshot,
+        screenshotTimer,
+      })
+
+      if (
+        !videoRef.current ||
+        !screenshotCanvasRef.current ||
+        recordingState !== "idle"
+      ) {
+        console.log("📸 Early return:", {
+          hasVideo: !!videoRef.current,
+          hasCanvas: !!screenshotCanvasRef.current,
+          recordingState,
+        })
         return
       }
 
       // Prevent multiple simultaneous screenshot captures using ref for immediate protection
       if (isCapturingRef.current || isCapturingScreenshot) {
-        console.log('📸 Already capturing screenshot, ignoring call')
+        console.log("📸 Already capturing screenshot, ignoring call")
         return
       }
 
       // If timer is set and this is a manual trigger, start countdown
       if (withTimer && screenshotTimer > 0 && !isTimerActive) {
-        console.log('📸 Starting timer countdown:', screenshotTimer)
-        
+        console.log("📸 Starting timer countdown:", screenshotTimer)
+
         // Clear any existing timer
         if (timerIntervalRef.current) {
           clearInterval(timerIntervalRef.current)
         }
-        
+
         setIsTimerActive(true)
         setTimerCountdown(screenshotTimer)
 
         let currentCount = screenshotTimer
         timerIntervalRef.current = setInterval(() => {
           currentCount--
-          console.log('📸 Timer countdown:', currentCount)
+          console.log("📸 Timer countdown:", currentCount)
           setTimerCountdown(currentCount)
-          
+
           if (currentCount <= 0) {
-            console.log('📸 Timer finished, taking screenshot')
+            console.log("📸 Timer finished, taking screenshot")
             clearInterval(timerIntervalRef.current!)
             timerIntervalRef.current = null
             setIsTimerActive(false)
@@ -2042,346 +2469,414 @@ export default function CameraRecorder() {
       }
 
       // Direct screenshot without timer
-      console.log('📸 Taking direct screenshot')
+      console.log("📸 Taking direct screenshot")
       actuallyTakeScreenshot()
     },
-    [recordingState, screenshotTimer, isTimerActive, isCapturingScreenshot],
+    [recordingState, screenshotTimer, isTimerActive, isCapturingScreenshot]
   )
 
   // Separate function for the actual screenshot logic to avoid recursion
-  const actuallyTakeScreenshot = useCallback(
-    async () => {
-      console.log('📸 actuallyTakeScreenshot called:', { isCapturingScreenshot, isCapturingRef: isCapturingRef.current })
-      
-      if (!videoRef.current || !screenshotCanvasRef.current || recordingState !== "idle") {
-        console.log('📸 actuallyTakeScreenshot early return:', { hasVideo: !!videoRef.current, hasCanvas: !!screenshotCanvasRef.current, recordingState })
-        return
-      }
+  const actuallyTakeScreenshot = useCallback(async () => {
+    console.log("📸 actuallyTakeScreenshot called:", {
+      isCapturingScreenshot,
+      isCapturingRef: isCapturingRef.current,
+    })
 
-      // Prevent multiple simultaneous captures using ref for immediate protection
-      if (isCapturingRef.current || isCapturingScreenshot) {
-        console.log('📸 Already capturing screenshot in actuallyTakeScreenshot, ignoring')
-        return
-      }
+    if (
+      !videoRef.current ||
+      !screenshotCanvasRef.current ||
+      recordingState !== "idle"
+    ) {
+      console.log("📸 actuallyTakeScreenshot early return:", {
+        hasVideo: !!videoRef.current,
+        hasCanvas: !!screenshotCanvasRef.current,
+        recordingState,
+      })
+      return
+    }
 
-      console.log('📸 Starting screenshot capture')
-      isCapturingRef.current = true
-      setIsCapturingScreenshot(true)
+    // Prevent multiple simultaneous captures using ref for immediate protection
+    if (isCapturingRef.current || isCapturingScreenshot) {
+      console.log(
+        "📸 Already capturing screenshot in actuallyTakeScreenshot, ignoring"
+      )
+      return
+    }
 
-      // Safety timeout to reset flags in case something goes wrong
-      const safetyTimeout = setTimeout(() => {
-        console.log('📸 Safety timeout triggered, resetting capture flags')
-        isCapturingRef.current = false
-        setIsCapturingScreenshot(false)
-      }, 5000) // 5 second timeout
+    console.log("📸 Starting screenshot capture")
+    isCapturingRef.current = true
+    setIsCapturingScreenshot(true)
 
-      const video = videoRef.current
-      const canvas = screenshotCanvasRef.current
-      const ctx = canvas.getContext("2d")
+    // Safety timeout to reset flags in case something goes wrong
+    const safetyTimeout = setTimeout(() => {
+      console.log("📸 Safety timeout triggered, resetting capture flags")
+      isCapturingRef.current = false
+      setIsCapturingScreenshot(false)
+    }, 5000) // 5 second timeout
 
-      if (!ctx) return
+    const video = videoRef.current
+    const canvas = screenshotCanvasRef.current
+    const ctx = canvas.getContext("2d")
 
-      if (isCropMode) {
-        // Screenshot with crop - properly handle aspect ratios and fullscreen
-        const videoWidth = video.videoWidth || 1280
-        const videoHeight = video.videoHeight || 720
-        const videoAspectRatio = videoWidth / videoHeight
+    if (!ctx) return
 
-        // Get the container dimensions - handle fullscreen vs normal mode
-        let containerRect: DOMRect
+    if (isCropMode) {
+      // Screenshot with crop - properly handle aspect ratios and fullscreen
+      const videoWidth = video.videoWidth || 1280
+      const videoHeight = video.videoHeight || 720
+      const videoAspectRatio = videoWidth / videoHeight
 
-        if (isFullscreen) {
-          // In fullscreen, use the actual video element bounds
-          containerRect = video.getBoundingClientRect()
-        } else {
-          // In normal mode, use the container
-          const containerElement = videoContainerRef.current
-          if (!containerElement) return
-          containerRect = containerElement.getBoundingClientRect()
-        }
+      // Get the container dimensions - handle fullscreen vs normal mode
+      let containerRect: DOMRect
 
-        const containerAspectRatio = containerRect.width / containerRect.height
-
-        // Calculate how the video is actually displayed within the container (using same logic as getVideoDisplayArea)
-        let displayedVideoWidth: number
-        let displayedVideoHeight: number
-        let videoOffsetX = 0
-        let videoOffsetY = 0
-
-        // Use a small tolerance for aspect ratio comparison to handle floating point precision
-        const aspectRatioTolerance = 0.01
-        const aspectRatioDiff = Math.abs(videoAspectRatio - containerAspectRatio)
-        
-        if (aspectRatioDiff < aspectRatioTolerance) {
-          // Aspect ratios are essentially the same - video fills container
-          displayedVideoWidth = containerRect.width
-          displayedVideoHeight = containerRect.height
-          videoOffsetX = 0
-          videoOffsetY = 0
-        } else if (videoAspectRatio > containerAspectRatio) {
-          // Video is wider than container - constrain by width (letterboxed)
-          displayedVideoWidth = containerRect.width
-          displayedVideoHeight = containerRect.width / videoAspectRatio
-          videoOffsetX = 0
-          videoOffsetY = (containerRect.height - displayedVideoHeight) / 2
-        } else {
-          // Video is taller than container - constrain by height (pillarboxed)
-          displayedVideoWidth = containerRect.height * videoAspectRatio
-          displayedVideoHeight = containerRect.height
-          videoOffsetX = (containerRect.width - displayedVideoWidth) / 2
-          videoOffsetY = 0
-        }
-
-        // Convert crop area from container percentage to actual pixel coordinates
-        const cropStartX = cropArea.x * containerRect.width
-        const cropStartY = cropArea.y * containerRect.height
-        const cropWidth = cropArea.width * containerRect.width
-        const cropHeight = cropArea.height * containerRect.height
-
-        // Adjust for video offset and convert to video coordinates
-        const videoCropStartX = (cropStartX - videoOffsetX) * (videoWidth / displayedVideoWidth)
-        const videoCropStartY = (cropStartY - videoOffsetY) * (videoHeight / displayedVideoHeight)
-        const videoCropWidth = cropWidth * (videoWidth / displayedVideoWidth)
-        const videoCropHeight = cropHeight * (videoHeight / displayedVideoHeight)
-
-        // Clamp to video bounds
-        const clampedX = Math.max(0, Math.min(videoCropStartX, videoWidth))
-        const clampedY = Math.max(0, Math.min(videoCropStartY, videoHeight))
-        const clampedWidth = Math.max(1, Math.min(videoCropWidth, videoWidth - clampedX))
-        const clampedHeight = Math.max(1, Math.min(videoCropHeight, videoHeight - clampedY))
-
-        canvas.width = clampedWidth
-        canvas.height = clampedHeight
-
-        if (isMirrored) {
-          ctx.save()
-          ctx.scale(-1, 1)
-          ctx.drawImage(
-            video,
-            clampedX,
-            clampedY,
-            clampedWidth,
-            clampedHeight,
-            -clampedWidth,
-            0,
-            clampedWidth,
-            clampedHeight,
-          )
-          ctx.restore()
-        } else {
-          ctx.drawImage(video, clampedX, clampedY, clampedWidth, clampedHeight, 0, 0, clampedWidth, clampedHeight)
-        }
+      if (isFullscreen) {
+        // In fullscreen, use the actual video element bounds
+        containerRect = video.getBoundingClientRect()
       } else {
-        // Full screenshot - capture in the selected aspect ratio
-        const videoWidth = video.videoWidth || 1280
-        const videoHeight = video.videoHeight || 720
-        const videoAspectRatio = videoWidth / videoHeight
-        
-        // Calculate target aspect ratio
-        let targetAspectRatio: number
+        // In normal mode, use the container
+        const containerElement = videoContainerRef.current
+        if (!containerElement) return
+        containerRect = containerElement.getBoundingClientRect()
+      }
+
+      const containerAspectRatio = containerRect.width / containerRect.height
+
+      // Calculate how the video is actually displayed within the container (using same logic as getVideoDisplayArea)
+      let displayedVideoWidth: number
+      let displayedVideoHeight: number
+      let videoOffsetX = 0
+      let videoOffsetY = 0
+
+      // Use a small tolerance for aspect ratio comparison to handle floating point precision
+      const aspectRatioTolerance = 0.01
+      const aspectRatioDiff = Math.abs(videoAspectRatio - containerAspectRatio)
+
+      if (aspectRatioDiff < aspectRatioTolerance) {
+        // Aspect ratios are essentially the same - video fills container
+        displayedVideoWidth = containerRect.width
+        displayedVideoHeight = containerRect.height
+        videoOffsetX = 0
+        videoOffsetY = 0
+      } else if (videoAspectRatio > containerAspectRatio) {
+        // Video is wider than container - constrain by width (letterboxed)
+        displayedVideoWidth = containerRect.width
+        displayedVideoHeight = containerRect.width / videoAspectRatio
+        videoOffsetX = 0
+        videoOffsetY = (containerRect.height - displayedVideoHeight) / 2
+      } else {
+        // Video is taller than container - constrain by height (pillarboxed)
+        displayedVideoWidth = containerRect.height * videoAspectRatio
+        displayedVideoHeight = containerRect.height
+        videoOffsetX = (containerRect.width - displayedVideoWidth) / 2
+        videoOffsetY = 0
+      }
+
+      // Convert crop area from container percentage to actual pixel coordinates
+      const cropStartX = cropArea.x * containerRect.width
+      const cropStartY = cropArea.y * containerRect.height
+      const cropWidth = cropArea.width * containerRect.width
+      const cropHeight = cropArea.height * containerRect.height
+
+      // Adjust for video offset and convert to video coordinates
+      const videoCropStartX =
+        (cropStartX - videoOffsetX) * (videoWidth / displayedVideoWidth)
+      const videoCropStartY =
+        (cropStartY - videoOffsetY) * (videoHeight / displayedVideoHeight)
+      const videoCropWidth = cropWidth * (videoWidth / displayedVideoWidth)
+      const videoCropHeight = cropHeight * (videoHeight / displayedVideoHeight)
+
+      // Clamp to video bounds
+      const clampedX = Math.max(0, Math.min(videoCropStartX, videoWidth))
+      const clampedY = Math.max(0, Math.min(videoCropStartY, videoHeight))
+      const clampedWidth = Math.max(
+        1,
+        Math.min(videoCropWidth, videoWidth - clampedX)
+      )
+      const clampedHeight = Math.max(
+        1,
+        Math.min(videoCropHeight, videoHeight - clampedY)
+      )
+
+      canvas.width = clampedWidth
+      canvas.height = clampedHeight
+
+      if (isMirrored) {
+        ctx.save()
+        ctx.scale(-1, 1)
+        ctx.drawImage(
+          video,
+          clampedX,
+          clampedY,
+          clampedWidth,
+          clampedHeight,
+          -clampedWidth,
+          0,
+          clampedWidth,
+          clampedHeight
+        )
+        ctx.restore()
+      } else {
+        ctx.drawImage(
+          video,
+          clampedX,
+          clampedY,
+          clampedWidth,
+          clampedHeight,
+          0,
+          0,
+          clampedWidth,
+          clampedHeight
+        )
+      }
+    } else {
+      // Full screenshot - capture in the selected aspect ratio
+      const videoWidth = video.videoWidth || 1280
+      const videoHeight = video.videoHeight || 720
+      const videoAspectRatio = videoWidth / videoHeight
+
+      // Calculate target aspect ratio
+      let targetAspectRatio: number
+      switch (aspectRatio) {
+        case "9:16":
+          targetAspectRatio = 9 / 16
+          break
+        case "4:3":
+          targetAspectRatio = 4 / 3
+          break
+        case "1:1":
+          targetAspectRatio = 1
+          break
+        default: // "16:9"
+          targetAspectRatio = 16 / 9
+          break
+      }
+
+      // Calculate screenshot dimensions based on selected aspect ratio and HD setting
+      let screenshotWidth: number
+      let screenshotHeight: number
+
+      // Use exact dimensions for each aspect ratio, with HD option for higher resolution
+      if (isHDScreenshot) {
+        // HD/4K dimensions for better quality
         switch (aspectRatio) {
           case "9:16":
-            targetAspectRatio = 9 / 16
+            screenshotWidth = 2160 // 4K vertical
+            screenshotHeight = 3840
             break
           case "4:3":
-            targetAspectRatio = 4 / 3
+            screenshotWidth = 2880 // Enhanced 4:3
+            screenshotHeight = 2160
             break
           case "1:1":
-            targetAspectRatio = 1
+            screenshotWidth = 2160 // 4K square
+            screenshotHeight = 2160
             break
           default: // "16:9"
-            targetAspectRatio = 16 / 9
+            screenshotWidth = 3840 // 4K landscape
+            screenshotHeight = 2160
             break
         }
-        
-        // Calculate screenshot dimensions based on selected aspect ratio and HD setting
-        let screenshotWidth: number
-        let screenshotHeight: number
-        
-        // Use exact dimensions for each aspect ratio, with HD option for higher resolution
-        if (isHDScreenshot) {
-          // HD/4K dimensions for better quality
-          switch (aspectRatio) {
-            case "9:16":
-              screenshotWidth = 2160  // 4K vertical
-              screenshotHeight = 3840
-              break
-            case "4:3":
-              screenshotWidth = 2880  // Enhanced 4:3
-              screenshotHeight = 2160
-              break
-            case "1:1":
-              screenshotWidth = 2160  // 4K square
-              screenshotHeight = 2160
-              break
-            default: // "16:9"
-              screenshotWidth = 3840  // 4K landscape
-              screenshotHeight = 2160
-              break
-          }
-        } else {
-          // Standard HD dimensions
-          switch (aspectRatio) {
-            case "9:16":
-              screenshotWidth = 1080
-              screenshotHeight = 1920
-              break
-            case "4:3":
-              screenshotWidth = 1440
-              screenshotHeight = 1080
-              break
-            case "1:1":
-              screenshotWidth = 1080
-              screenshotHeight = 1080
-              break
-            default: // "16:9"
-              screenshotWidth = 1920
-              screenshotHeight = 1080
-              break
-          }
+      } else {
+        // Standard HD dimensions
+        switch (aspectRatio) {
+          case "9:16":
+            screenshotWidth = 1080
+            screenshotHeight = 1920
+            break
+          case "4:3":
+            screenshotWidth = 1440
+            screenshotHeight = 1080
+            break
+          case "1:1":
+            screenshotWidth = 1080
+            screenshotHeight = 1080
+            break
+          default: // "16:9"
+            screenshotWidth = 1920
+            screenshotHeight = 1080
+            break
         }
-        
-        canvas.width = screenshotWidth
-        canvas.height = screenshotHeight
-        
-        // Debug screenshot dimensions
-        console.log(`📸 Screenshot FINAL dimensions for ${aspectRatio} (${isHDScreenshot ? 'HD/4K' : 'Standard'}):`, {
+      }
+
+      canvas.width = screenshotWidth
+      canvas.height = screenshotHeight
+
+      // Debug screenshot dimensions
+      console.log(
+        `📸 Screenshot FINAL dimensions for ${aspectRatio} (${isHDScreenshot ? "HD/4K" : "Standard"}):`,
+        {
           targetAspectRatio,
           screenshotSize: { width: screenshotWidth, height: screenshotHeight },
           actualAspectRatio: screenshotWidth / screenshotHeight,
-          videoSize: { width: videoWidth, height: videoHeight, aspectRatio: videoAspectRatio },
+          videoSize: {
+            width: videoWidth,
+            height: videoHeight,
+            aspectRatio: videoAspectRatio,
+          },
           isVertical: screenshotHeight > screenshotWidth,
           expectedVertical: aspectRatio === "9:16",
-          isHD: isHDScreenshot
-        })
-        
-        // Clear canvas with black background
-        ctx.fillStyle = '#000000'
-        ctx.fillRect(0, 0, screenshotWidth, screenshotHeight)
-        
-        // Calculate how to fit the video into the screenshot canvas
-        let drawWidth: number
-        let drawHeight: number
-        let drawX = 0
-        let drawY = 0
-        
-        // For vertical screenshots (9:16), we want to fill the height and center horizontally
-        if (aspectRatio === "9:16") {
-          // Always fill the height for vertical screenshots
-          drawHeight = screenshotHeight
-          drawWidth = Math.round(screenshotHeight * videoAspectRatio)
-          drawX = Math.round((screenshotWidth - drawWidth) / 2)
-          
-          console.log(`📐 Vertical screenshot fitting:`, {
-            videoAspectRatio,
-            drawSize: { width: drawWidth, height: drawHeight },
-            drawPosition: { x: drawX, y: drawY },
-            willFillHeight: true
-          })
-        } else if (Math.abs(videoAspectRatio - targetAspectRatio) < 0.01) {
-          // Video aspect ratio matches target - fill entire canvas
-          drawWidth = screenshotWidth
-          drawHeight = screenshotHeight
-        } else if (videoAspectRatio > targetAspectRatio) {
-          // Video is wider - fit by height (letterbox)
-          drawHeight = screenshotHeight
-          drawWidth = Math.round(screenshotHeight * videoAspectRatio)
-          drawX = Math.round((screenshotWidth - drawWidth) / 2)
-        } else {
-          // Video is taller - fit by width (pillarbox)
-          drawWidth = screenshotWidth
-          drawHeight = Math.round(screenshotWidth / videoAspectRatio)
-          drawY = Math.round((screenshotHeight - drawHeight) / 2)
+          isHD: isHDScreenshot,
         }
-        
-        // Draw the video
-        if (isMirrored) {
-          ctx.save()
-          ctx.scale(-1, 1)
-          ctx.drawImage(
-            video,
-            0, 0, videoWidth, videoHeight,
-            -(drawX + drawWidth), drawY, drawWidth, drawHeight
-          )
-          ctx.restore()
-        } else {
-          ctx.drawImage(
-            video,
-            0, 0, videoWidth, videoHeight,
-            drawX, drawY, drawWidth, drawHeight
-          )
-        }
-      }
-
-      // Apply effects if enabled
-      if (videoEffect !== ("none" as VideoEffect)) {
-        applyEffectToScreenshot(ctx, canvas, isCropMode ? "crop" : "full")
-      }
-
-      // Show flash effect
-      setShowFlash(true)
-      setTimeout(() => setShowFlash(false), 200)
-
-      // Convert canvas to blob
-      const quality = screenshotFormat === "jpeg" ? 0.9 : undefined
-      
-                    // Final debug log before saving
-              console.log(`💾 Saving screenshot with canvas dimensions (${isHDScreenshot ? 'HD/4K' : 'Standard'}):`, {
-                canvasWidth: canvas.width,
-                canvasHeight: canvas.height,
-                aspectRatio: canvas.width / canvas.height,
-                expectedAspectRatio: aspectRatio,
-                isCorrectVertical: aspectRatio === "9:16" && canvas.height > canvas.width,
-                isHD: isHDScreenshot,
-                resolution: `${canvas.width}x${canvas.height}`
-              })
-      
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            try {
-              const screenshotId = `screenshot-${Date.now()}`
-              const screenshotUrl = URL.createObjectURL(blob)
-
-              // Add to screenshots array
-              const newScreenshot = {
-                id: screenshotId,
-                url: screenshotUrl,
-                timestamp: new Date(),
-              }
-
-              setScreenshots((prev) => [newScreenshot, ...prev]) // Keep all screenshots
-              setScreenshotCount((prev) => prev + 1)
-              
-              console.log(`✅ Screenshot saved successfully! Resolution: ${canvas.width}x${canvas.height} (${isHDScreenshot ? 'HD/4K' : 'Standard'}) - Vertical: ${canvas.height > canvas.width}`)
-            } catch (error) {
-              console.error("Error creating screenshot:", error)
-            } finally {
-              // Always reset the capturing flags
-              clearTimeout(safetyTimeout)
-              isCapturingRef.current = false
-              setIsCapturingScreenshot(false)
-              console.log('📸 Screenshot capture completed, flags reset')
-            }
-          }
-        },
-        `image/${screenshotFormat}`,
-        quality,
       )
-    },
-    [recordingState, screenshotFormat, isCropMode, cropArea, isFullscreen, isMirrored, isEffectCropMode, videoEffect, effectIntensity, applyEffectToScreenshot, aspectRatio, getVideoDisplayArea, isCapturingScreenshot, isHDScreenshot],
-  )
+
+      // Clear canvas with black background
+      ctx.fillStyle = "#000000"
+      ctx.fillRect(0, 0, screenshotWidth, screenshotHeight)
+
+      // Calculate how to fit the video into the screenshot canvas
+      let drawWidth: number
+      let drawHeight: number
+      let drawX = 0
+      let drawY = 0
+
+      // For vertical screenshots (9:16), we want to fill the height and center horizontally
+      if (aspectRatio === "9:16") {
+        // Always fill the height for vertical screenshots
+        drawHeight = screenshotHeight
+        drawWidth = Math.round(screenshotHeight * videoAspectRatio)
+        drawX = Math.round((screenshotWidth - drawWidth) / 2)
+
+        console.log(`📐 Vertical screenshot fitting:`, {
+          videoAspectRatio,
+          drawSize: { width: drawWidth, height: drawHeight },
+          drawPosition: { x: drawX, y: drawY },
+          willFillHeight: true,
+        })
+      } else if (Math.abs(videoAspectRatio - targetAspectRatio) < 0.01) {
+        // Video aspect ratio matches target - fill entire canvas
+        drawWidth = screenshotWidth
+        drawHeight = screenshotHeight
+      } else if (videoAspectRatio > targetAspectRatio) {
+        // Video is wider - fit by height (letterbox)
+        drawHeight = screenshotHeight
+        drawWidth = Math.round(screenshotHeight * videoAspectRatio)
+        drawX = Math.round((screenshotWidth - drawWidth) / 2)
+      } else {
+        // Video is taller - fit by width (pillarbox)
+        drawWidth = screenshotWidth
+        drawHeight = Math.round(screenshotWidth / videoAspectRatio)
+        drawY = Math.round((screenshotHeight - drawHeight) / 2)
+      }
+
+      // Draw the video
+      if (isMirrored) {
+        ctx.save()
+        ctx.scale(-1, 1)
+        ctx.drawImage(
+          video,
+          0,
+          0,
+          videoWidth,
+          videoHeight,
+          -(drawX + drawWidth),
+          drawY,
+          drawWidth,
+          drawHeight
+        )
+        ctx.restore()
+      } else {
+        ctx.drawImage(
+          video,
+          0,
+          0,
+          videoWidth,
+          videoHeight,
+          drawX,
+          drawY,
+          drawWidth,
+          drawHeight
+        )
+      }
+    }
+
+    // Apply effects if enabled
+    if (videoEffect !== ("none" as VideoEffect)) {
+      applyEffectToScreenshot(ctx, canvas, isCropMode ? "crop" : "full")
+    }
+
+    // Show flash effect
+    setShowFlash(true)
+    setTimeout(() => setShowFlash(false), 200)
+
+    // Convert canvas to blob
+    const quality = screenshotFormat === "jpeg" ? 0.9 : undefined
+
+    // Final debug log before saving
+    console.log(
+      `💾 Saving screenshot with canvas dimensions (${isHDScreenshot ? "HD/4K" : "Standard"}):`,
+      {
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height,
+        aspectRatio: canvas.width / canvas.height,
+        expectedAspectRatio: aspectRatio,
+        isCorrectVertical:
+          aspectRatio === "9:16" && canvas.height > canvas.width,
+        isHD: isHDScreenshot,
+        resolution: `${canvas.width}x${canvas.height}`,
+      }
+    )
+
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          try {
+            const screenshotId = `screenshot-${Date.now()}`
+            const screenshotUrl = URL.createObjectURL(blob)
+
+            // Add to screenshots array
+            const newScreenshot = {
+              id: screenshotId,
+              url: screenshotUrl,
+              timestamp: new Date(),
+            }
+
+            setScreenshots((prev) => [newScreenshot, ...prev]) // Keep all screenshots
+            setScreenshotCount((prev) => prev + 1)
+
+            console.log(
+              `✅ Screenshot saved successfully! Resolution: ${canvas.width}x${canvas.height} (${isHDScreenshot ? "HD/4K" : "Standard"}) - Vertical: ${canvas.height > canvas.width}`
+            )
+          } catch (error) {
+            console.error("Error creating screenshot:", error)
+          } finally {
+            // Always reset the capturing flags
+            clearTimeout(safetyTimeout)
+            isCapturingRef.current = false
+            setIsCapturingScreenshot(false)
+            console.log("📸 Screenshot capture completed, flags reset")
+          }
+        }
+      },
+      `image/${screenshotFormat}`,
+      quality
+    )
+  }, [
+    recordingState,
+    screenshotFormat,
+    isCropMode,
+    cropArea,
+    isFullscreen,
+    isMirrored,
+    isEffectCropMode,
+    videoEffect,
+    effectIntensity,
+    applyEffectToScreenshot,
+    aspectRatio,
+    getVideoDisplayArea,
+    isCapturingScreenshot,
+    isHDScreenshot,
+  ])
 
   // Cancel screenshot timer
   const cancelScreenshotTimer = useCallback(() => {
-    console.log('📸 Timer cancelled')
-    
+    console.log("📸 Timer cancelled")
+
     // Clear timer interval
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current)
       timerIntervalRef.current = null
     }
-    
+
     setIsTimerActive(false)
     setTimerCountdown(0)
     isCapturingRef.current = false
@@ -2405,7 +2900,7 @@ export default function CameraRecorder() {
         window.open(screenshot.url, "_blank")
       }
     },
-    [screenshotFormat],
+    [screenshotFormat]
   )
 
   // State for download progress
@@ -2437,20 +2932,22 @@ export default function CameraRecorder() {
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
-          const response = await fetch(screenshot.url, { 
-            signal: controller.signal 
+          const response = await fetch(screenshot.url, {
+            signal: controller.signal,
           })
           clearTimeout(timeoutId)
 
           if (!response.ok) {
-            throw new Error(`Failed to fetch screenshot ${i + 1}: ${response.status}`)
+            throw new Error(
+              `Failed to fetch screenshot ${i + 1}: ${response.status}`
+            )
           }
 
           const blob = await response.blob()
 
           // Create filename with timestamp and index
           const timestamp = screenshot.timestamp.getTime()
-          const filename = `screenshot-${timestamp}-${String(i + 1).padStart(3, '0')}.${screenshotFormat}`
+          const filename = `screenshot-${timestamp}-${String(i + 1).padStart(3, "0")}.${screenshotFormat}`
 
           // Add to ZIP
           zip.file(filename, blob)
@@ -2467,15 +2964,18 @@ export default function CameraRecorder() {
       console.log("Generating ZIP file...")
 
       // Generate ZIP file with progress callback
-      const zipBlob = await zip.generateAsync({ 
-        type: "blob",
-        compression: "DEFLATE",
-        compressionOptions: { level: 6 }
-      }, (metadata) => {
-        // Update progress during ZIP generation (60-90%)
-        const zipProgress = 60 + (metadata.percent * 0.3)
-        setDownloadProgress(Math.round(zipProgress))
-      })
+      const zipBlob = await zip.generateAsync(
+        {
+          type: "blob",
+          compression: "DEFLATE",
+          compressionOptions: { level: 6 },
+        },
+        (metadata) => {
+          // Update progress during ZIP generation (60-90%)
+          const zipProgress = 60 + metadata.percent * 0.3
+          setDownloadProgress(Math.round(zipProgress))
+        }
+      )
 
       setDownloadProgress(95)
 
@@ -2493,7 +2993,9 @@ export default function CameraRecorder() {
       document.body.removeChild(a)
 
       setDownloadProgress(100)
-      console.log(`Successfully created ZIP with ${totalScreenshots} screenshots`)
+      console.log(
+        `Successfully created ZIP with ${totalScreenshots} screenshots`
+      )
 
       // Clean up
       setTimeout(() => {
@@ -2501,16 +3003,15 @@ export default function CameraRecorder() {
         setIsDownloadingAll(false)
         setDownloadProgress(0)
       }, 2000)
-
     } catch (error) {
       console.error("Error creating ZIP file:", error)
       setDownloadProgress(0)
-      
+
       // Fallback: download screenshots individually with user confirmation
       const fallbackDownload = window.confirm(
         `Failed to create ZIP file. Would you like to download all ${screenshots.length} screenshots individually? This will trigger multiple downloads.`
       )
-      
+
       if (fallbackDownload) {
         console.log("Starting individual downloads...")
         screenshots.forEach((screenshot, index) => {
@@ -2523,7 +3024,7 @@ export default function CameraRecorder() {
           }, index * 800) // Stagger downloads to avoid browser blocking
         })
       }
-      
+
       setIsDownloadingAll(false)
     }
   }, [screenshots, screenshotFormat, downloadScreenshot, isDownloadingAll])
@@ -2607,7 +3108,7 @@ export default function CameraRecorder() {
       } else {
         // Webcam mode - apply effects, crop, or mirror as needed
         recordingStream = streamRef.current
-        
+
         if (videoEffect !== ("none" as VideoEffect) || isEffectCropMode) {
           const effectStream = createEffectStream()
           if (effectStream) {
@@ -2790,9 +3291,9 @@ export default function CameraRecorder() {
       // Add a small delay to ensure video layout has adjusted to new aspect ratio
       const timeoutId = setTimeout(() => {
         // Force re-render by updating a state that doesn't affect the video
-        setVideoContainerSize(prev => ({ ...prev }))
+        setVideoContainerSize((prev) => ({ ...prev }))
       }, 150)
-      
+
       return () => clearTimeout(timeoutId)
     }
   }, [aspectRatio, isLightMode, isFullscreen])
@@ -2801,14 +3302,14 @@ export default function CameraRecorder() {
   const handleFullscreenChange = useCallback(() => {
     const wasFullscreen = isFullscreen
     const nowFullscreen = !!document.fullscreenElement
-    
+
     setIsFullscreen(nowFullscreen)
-    
+
     // Turn off light mode when exiting fullscreen (since it only works in fullscreen)
     if (wasFullscreen && !nowFullscreen && isLightMode) {
       setIsLightMode(false)
     }
-    
+
     // If fullscreen state changed and crop modes are active, recalculate positions
     if (wasFullscreen !== nowFullscreen) {
       recalculateCropAreas()
@@ -2892,47 +3393,50 @@ export default function CameraRecorder() {
   // }, [])
 
   // Reset to start over
-  const resetRecording = useCallback((clearScreenshots = false) => {
-    setRecordingState("idle")
-    setRecordedBlob(null)
-    setRecordingTime(0)
-    setVideoDuration(0)
-    setTrimStart(0)
-    setTrimEnd(0)
-    setIsPlaying(false)
-    setCurrentTime(0)
-    setCameraError(null)
-    setIsCropMode(false)
-    setIsEffectCropMode(false)
-    resetZoom()
-    setIsMirrored(false)
+  const resetRecording = useCallback(
+    (clearScreenshots = false) => {
+      setRecordingState("idle")
+      setRecordedBlob(null)
+      setRecordingTime(0)
+      setVideoDuration(0)
+      setTrimStart(0)
+      setTrimEnd(0)
+      setIsPlaying(false)
+      setCurrentTime(0)
+      setCameraError(null)
+      setIsCropMode(false)
+      setIsEffectCropMode(false)
+      resetZoom()
+      setIsMirrored(false)
 
-    // Clean up thumbnails (these are tied to specific videos)
-    setThumbnails((prevThumbnails) => {
-      prevThumbnails.forEach((thumbnail) => {
-        if (!thumbnail.url.startsWith("data:")) {
-          URL.revokeObjectURL(thumbnail.url)
-        }
-      })
-      return []
-    })
-
-    // Only clear screenshots if explicitly requested
-    // Screenshots are independent of recordings and should persist across sessions
-    if (clearScreenshots) {
-      setScreenshots((prevScreenshots) => {
-        prevScreenshots.forEach((screenshot) => {
-          URL.revokeObjectURL(screenshot.url)
+      // Clean up thumbnails (these are tied to specific videos)
+      setThumbnails((prevThumbnails) => {
+        prevThumbnails.forEach((thumbnail) => {
+          if (!thumbnail.url.startsWith("data:")) {
+            URL.revokeObjectURL(thumbnail.url)
+          }
         })
         return []
       })
-    }
 
-    if (videoRef.current) {
-      videoRef.current.src = ""
-      videoRef.current.srcObject = streamRef.current
-    }
-  }, [resetZoom])
+      // Only clear screenshots if explicitly requested
+      // Screenshots are independent of recordings and should persist across sessions
+      if (clearScreenshots) {
+        setScreenshots((prevScreenshots) => {
+          prevScreenshots.forEach((screenshot) => {
+            URL.revokeObjectURL(screenshot.url)
+          })
+          return []
+        })
+      }
+
+      if (videoRef.current) {
+        videoRef.current.src = ""
+        videoRef.current.srcObject = streamRef.current
+      }
+    },
+    [resetZoom]
+  )
 
   // Set mounted state to prevent hydration errors
   useEffect(() => {
@@ -2942,7 +3446,7 @@ export default function CameraRecorder() {
   // Initialize camera on mount (only on client side)
   useEffect(() => {
     if (!isMounted) return
-    
+
     initializeCamera()
 
     return () => {
@@ -2964,7 +3468,7 @@ export default function CameraRecorder() {
       if (pipAnimationRef.current) {
         cancelAnimationFrame(pipAnimationRef.current)
       }
-      // Note: Screenshots and thumbnails cleanup moved to separate effect to prevent 
+      // Note: Screenshots and thumbnails cleanup moved to separate effect to prevent
       // clearing them when camera reinitializes due to aspect ratio changes
     }
   }, [isMounted, initializeCamera])
@@ -3037,21 +3541,45 @@ export default function CameraRecorder() {
 
   // Generate thumbnails when video is ready
   useEffect(() => {
-    if (recordingState === "stopped" && videoDuration > 0 && !isGeneratingThumbnails && thumbnails.length === 0) {
+    if (
+      recordingState === "stopped" &&
+      videoDuration > 0 &&
+      !isGeneratingThumbnails &&
+      thumbnails.length === 0
+    ) {
       generateThumbnails()
     }
-  }, [recordingState, videoDuration, isGeneratingThumbnails, thumbnails.length, generateThumbnails])
+  }, [
+    recordingState,
+    videoDuration,
+    isGeneratingThumbnails,
+    thumbnails.length,
+    generateThumbnails,
+  ])
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Only handle shortcuts when not typing in an input field
-      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement
+      ) {
         return
       }
 
       // Prevent default behavior for our shortcuts
-      const shortcuts = ["KeyC", "KeyS", "KeyR", "Space", "Equal", "Minus", "Digit0", "KeyM", "KeyL"]
+      const shortcuts = [
+        "KeyC",
+        "KeyS",
+        "KeyR",
+        "Space",
+        "Equal",
+        "Minus",
+        "Digit0",
+        "KeyM",
+        "KeyL",
+      ]
       if (shortcuts.includes(event.code)) {
         event.preventDefault()
       }
@@ -3194,61 +3722,95 @@ export default function CameraRecorder() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-800 via-blue-800 to-purple-800 bg-clip-text text-transparent">
             FlexiCam Studio
           </h1>
-          <p className="text-lg text-gray-600 font-medium">Professional camera recorder & video editor with real-time effects</p>
+          <p className="text-lg text-gray-600 font-medium">
+            Professional camera recorder & video editor with real-time effects
+          </p>
 
           {/* Format Support Status */}
           <div className="flex items-center justify-center gap-4 text-sm flex-wrap">
             <div className="flex items-center gap-2 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2 shadow-sm border border-white/50">
               <Settings className="w-4 h-4 text-blue-600" />
-              <span className={`font-medium ${mp4RecordingSupported ? "text-emerald-600" : "text-amber-600"}`}>
-                {mp4RecordingSupported ? "Native MP4 Recording" : "MP4 via Conversion"}
+              <span
+                className={`font-medium ${mp4RecordingSupported ? "text-emerald-600" : "text-amber-600"}`}
+              >
+                {mp4RecordingSupported
+                  ? "Native MP4 Recording"
+                  : "MP4 via Conversion"}
               </span>
             </div>
             {webCodecsSupported && (
-              <Badge variant="secondary" className="bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 border-purple-200 shadow-sm">
+              <Badge
+                variant="secondary"
+                className="bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 border-purple-200 shadow-sm"
+              >
                 WebCodecs Available
               </Badge>
             )}
-            
+
             {/* Recording Mode Badge */}
-            <Badge variant="outline" className={`shadow-sm ${
-              recordingMode === "webcam" ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 text-blue-700" :
-              recordingMode === "screen" ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-300 text-green-700" :
-              "bg-gradient-to-r from-purple-50 to-pink-50 border-purple-300 text-purple-700"
-            }`}>
-              {recordingMode === "webcam" ? "📹 Webcam" : 
-               recordingMode === "screen" ? "🖥️ Screen" : 
-               "📺 Picture-in-Picture"}
+            <Badge
+              variant="outline"
+              className={`shadow-sm ${
+                recordingMode === "webcam"
+                  ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 text-blue-700"
+                  : recordingMode === "screen"
+                    ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-300 text-green-700"
+                    : "bg-gradient-to-r from-purple-50 to-pink-50 border-purple-300 text-purple-700"
+              }`}
+            >
+              {recordingMode === "webcam"
+                ? "📹 Webcam"
+                : recordingMode === "screen"
+                  ? "🖥️ Screen"
+                  : "📺 Picture-in-Picture"}
             </Badge>
 
             {isCropMode && (
-              <Badge variant="outline" className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-300 text-orange-700 shadow-sm">
+              <Badge
+                variant="outline"
+                className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-300 text-orange-700 shadow-sm"
+              >
                 Crop Mode Active
               </Badge>
             )}
             {zoomLevel !== 1 && (
-              <Badge variant="outline" className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-300 text-purple-700 shadow-sm">
+              <Badge
+                variant="outline"
+                className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-300 text-purple-700 shadow-sm"
+              >
                 Zoom {Math.round(zoomLevel * 100)}%
               </Badge>
             )}
             {isMirrored && (
-              <Badge variant="outline" className="bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-300 text-emerald-700 shadow-sm">
+              <Badge
+                variant="outline"
+                className="bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-300 text-emerald-700 shadow-sm"
+              >
                 Mirrored
               </Badge>
             )}
             {videoEffect !== ("none" as VideoEffect) && (
-              <Badge variant="outline" className="bg-gradient-to-r from-violet-50 to-purple-50 border-violet-300 text-violet-700 shadow-sm">
+              <Badge
+                variant="outline"
+                className="bg-gradient-to-r from-violet-50 to-purple-50 border-violet-300 text-violet-700 shadow-sm"
+              >
                 {videoEffect === "blur" ? "Blur" : "Pixelate"} {effectIntensity}
                 {isEffectCropMode && " (Area)"}
               </Badge>
             )}
             {isLightMode && (
-              <Badge variant="outline" className="bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-300 text-yellow-700 shadow-sm">
+              <Badge
+                variant="outline"
+                className="bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-300 text-yellow-700 shadow-sm"
+              >
                 Light Mode {lightIntensity}%
               </Badge>
             )}
             {isHDScreenshot && (
-              <Badge variant="outline" className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-300 text-purple-700 shadow-sm">
+              <Badge
+                variant="outline"
+                className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-300 text-purple-700 shadow-sm"
+              >
                 4K Screenshots
               </Badge>
             )}
@@ -3256,309 +3818,420 @@ export default function CameraRecorder() {
         </div>
 
         <div className="w-full space-y-8 mt-8">
-            {/* Export Format Selection */}
-        {recordingState === "stopped" || recordingState === "editing" ? (
-          <Card className="bg-white/70 backdrop-blur-sm border border-white/50 shadow-xl rounded-2xl overflow-hidden">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-center gap-6">
-                <label className="text-sm font-semibold text-gray-700">Export Format:</label>
-                <Select value={exportFormat} onValueChange={(value: ExportFormat) => setExportFormat(value)}>
-                  <SelectTrigger className="w-40 h-10 bg-white/80 border-gray-200 shadow-sm rounded-xl hover:bg-white transition-all duration-300">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white/95 backdrop-blur-sm border border-white/50 shadow-xl rounded-xl">
-                    <SelectItem value="webm">WebM</SelectItem>
-                    <SelectItem value="mp4">MP4 (WhatsApp)</SelectItem>
-                    <SelectItem value="avi">AVI (WhatsApp)</SelectItem>
-                    <SelectItem value="mov">MOV (WhatsApp)</SelectItem>
-                    <SelectItem value="3gp">3GP (WhatsApp)</SelectItem>
-                  </SelectContent>
-                </Select>
+          {/* Export Format Selection */}
+          {recordingState === "stopped" || recordingState === "editing" ? (
+            <Card className="bg-white/70 backdrop-blur-sm border border-white/50 shadow-xl rounded-2xl overflow-hidden">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-center gap-6">
+                  <label className="text-sm font-semibold text-gray-700">
+                    Export Format:
+                  </label>
+                  <Select
+                    value={exportFormat}
+                    onValueChange={(value: ExportFormat) =>
+                      setExportFormat(value)
+                    }
+                  >
+                    <SelectTrigger className="w-40 h-10 bg-white/80 border-gray-200 shadow-sm rounded-xl hover:bg-white transition-all duration-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white/95 backdrop-blur-sm border border-white/50 shadow-xl rounded-xl">
+                      <SelectItem value="webm">WebM</SelectItem>
+                      <SelectItem value="mp4">MP4 (WhatsApp)</SelectItem>
+                      <SelectItem value="avi">AVI (WhatsApp)</SelectItem>
+                      <SelectItem value="mov">MOV (WhatsApp)</SelectItem>
+                      <SelectItem value="3gp">3GP (WhatsApp)</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-                {exportFormat === "mp4" && (
-                  <Badge variant="secondary" className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 border-blue-200 shadow-sm">
-                    {mp4RecordingSupported ? "Native" : "Converted"}
+                  {exportFormat === "mp4" && (
+                    <Badge
+                      variant="secondary"
+                      className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 border-blue-200 shadow-sm"
+                    >
+                      {mp4RecordingSupported ? "Native" : "Converted"}
+                    </Badge>
+                  )}
+                </div>
+
+                {exportFormat === "mp4" &&
+                  !mp4RecordingSupported &&
+                  !webCodecsSupported && (
+                    <div className="mt-4 text-center text-sm text-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 shadow-sm">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                          />
+                        </svg>
+                        <span className="font-semibold">Note</span>
+                      </div>
+                      MP4 export will use conversion method (may have
+                      compatibility limitations)
+                    </div>
+                  )}
+                {(exportFormat === "mp4" ||
+                  exportFormat === "avi" ||
+                  exportFormat === "mov" ||
+                  exportFormat === "3gp") && (
+                  <div className="mt-4 text-center text-sm text-emerald-700 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span className="font-semibold">Compatible</span>
+                    </div>
+                    This format is compatible with WhatsApp
+                    {exportFormat === "3gp" &&
+                      " (optimized for mobile networks)"}
+                  </div>
+                )}
+                {(exportFormat === "avi" ||
+                  exportFormat === "mov" ||
+                  exportFormat === "3gp") && (
+                  <div className="mt-4 text-center text-sm text-blue-700 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 shadow-sm">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span className="font-semibold">Info</span>
+                    </div>
+                    {exportFormat.toUpperCase()} format may be saved as MP4 due
+                    to browser limitations, but the file extension will be .
+                    {exportFormat}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {/* Main Video Card */}
+          <Card className="bg-white/70 backdrop-blur-sm border border-white/50 shadow-2xl rounded-3xl overflow-hidden">
+            <CardHeader className="pb-6 bg-gradient-to-r from-gray-50/80 to-blue-50/80 border-b border-white/50">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  {recordingState === "recording" && (
+                    <>
+                      <div className="flex items-center gap-2 relative">
+                        <div className="w-4 h-4 bg-gradient-to-r from-red-500 to-red-600 rounded-full animate-pulse shadow-lg" />
+                        <div className="w-4 h-4 bg-red-500/30 rounded-full animate-ping absolute" />
+                      </div>
+                      <span className="bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent font-bold">
+                        Recording {isCropMode && "(Cropped)"}
+                      </span>
+                    </>
+                  )}
+                  {recordingState === "idle" && (
+                    <>
+                      <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl shadow-lg">
+                        <Camera className="w-5 h-5 text-white" />
+                      </div>
+                      <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        Camera Preview {isCropMode && "(Crop Mode)"}{" "}
+                        {zoomLevel !== 1 && `(${Math.round(zoomLevel * 100)}%)`}
+                      </span>
+                    </>
+                  )}
+                  {recordingState === "stopped" && (
+                    <>
+                      <div className="p-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl shadow-lg">
+                        <Play className="w-5 h-5 text-white" />
+                      </div>
+                      <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        Video Preview
+                      </span>
+                    </>
+                  )}
+                  {recordingState === "editing" && (
+                    <>
+                      <div className="p-2 bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl shadow-lg">
+                        <Scissors className="w-5 h-5 text-white" />
+                      </div>
+                      <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        Video Editor
+                      </span>
+                    </>
+                  )}
+                  {recordingState === "processing" && (
+                    <>
+                      <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl shadow-lg">
+                        <Clock className="w-5 h-5 text-white animate-spin" />
+                      </div>
+                      <span className="bg-gradient-to-r from-purple-700 to-indigo-700 bg-clip-text text-transparent">
+                        {exportFormat === "mp4"
+                          ? "Converting to MP4..."
+                          : "Processing Video..."}
+                      </span>
+                    </>
+                  )}
+                </CardTitle>
+
+                {recordingState === "recording" && (
+                  <Badge
+                    variant="destructive"
+                    className="animate-pulse bg-gradient-to-r from-red-500 to-red-600 shadow-lg px-4 py-2 text-white font-bold"
+                  >
+                    {formatTime(recordingTime)}
                   </Badge>
                 )}
               </div>
+            </CardHeader>
 
-              {exportFormat === "mp4" && !mp4RecordingSupported && !webCodecsSupported && (
-                <div className="mt-4 text-center text-sm text-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <span className="font-semibold">Note</span>
+            <CardContent className="space-y-6 p-8">
+              {/* Error Messages */}
+              {cameraError && (
+                <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-2xl p-6 text-red-700 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-red-100 rounded-xl">
+                      <svg
+                        className="w-5 h-5 text-red-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
+                      </svg>
+                    </div>
+                    <span className="font-semibold">{cameraError}</span>
                   </div>
-                  MP4 export will use conversion method (may have compatibility limitations)
                 </div>
               )}
-              {(exportFormat === "mp4" ||
-                exportFormat === "avi" ||
-                exportFormat === "mov" ||
-                exportFormat === "3gp") && (
-                <div className="mt-4 text-center text-sm text-emerald-700 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="font-semibold">Compatible</span>
+
+              {screenError && (
+                <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-2xl p-6 text-orange-700 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-orange-100 rounded-xl">
+                      <svg
+                        className="w-5 h-5 text-orange-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                    <span className="font-semibold">{screenError}</span>
                   </div>
-                  This format is compatible with WhatsApp
-                  {exportFormat === "3gp" && " (optimized for mobile networks)"}
                 </div>
               )}
-              {(exportFormat === "avi" || exportFormat === "mov" || exportFormat === "3gp") && (
-                <div className="mt-4 text-center text-sm text-blue-700 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="font-semibold">Info</span>
-                  </div>
-                  {exportFormat.toUpperCase()} format may be saved as MP4 due to browser limitations, but the
-                  file extension will be .{exportFormat}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ) : null}
 
-
-
-
-
-
-
-
-
-
-
-        {/* Main Video Card */}
-        <Card className="bg-white/70 backdrop-blur-sm border border-white/50 shadow-2xl rounded-3xl overflow-hidden">
-          <CardHeader className="pb-6 bg-gradient-to-r from-gray-50/80 to-blue-50/80 border-b border-white/50">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                {recordingState === "recording" && (
-                  <>
-                    <div className="flex items-center gap-2 relative">
-                      <div className="w-4 h-4 bg-gradient-to-r from-red-500 to-red-600 rounded-full animate-pulse shadow-lg" />
-                      <div className="w-4 h-4 bg-red-500/30 rounded-full animate-ping absolute" />
-                    </div>
-                    <span className="bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent font-bold">
-                      Recording {isCropMode && "(Cropped)"}
-                    </span>
-                  </>
-                )}
-                {recordingState === "idle" && (
-                  <>
-                    <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl shadow-lg">
-                      <Camera className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                      Camera Preview {isCropMode && "(Crop Mode)"}{" "}
-                      {zoomLevel !== 1 && `(${Math.round(zoomLevel * 100)}%)`}
-                    </span>
-                  </>
-                )}
-                {recordingState === "stopped" && (
-                  <>
-                    <div className="p-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl shadow-lg">
-                      <Play className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                      Video Preview
-                    </span>
-                  </>
-                )}
-                {recordingState === "editing" && (
-                  <>
-                    <div className="p-2 bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl shadow-lg">
-                      <Scissors className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                      Video Editor
-                    </span>
-                  </>
-                )}
-                {recordingState === "processing" && (
-                  <>
-                    <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl shadow-lg">
-                      <Clock className="w-5 h-5 text-white animate-spin" />
-                    </div>
-                    <span className="bg-gradient-to-r from-purple-700 to-indigo-700 bg-clip-text text-transparent">
-                      {exportFormat === "mp4" ? "Converting to MP4..." : "Processing Video..."}
-                    </span>
-                  </>
-                )}
-              </CardTitle>
-
-              {recordingState === "recording" && (
-                <Badge variant="destructive" className="animate-pulse bg-gradient-to-r from-red-500 to-red-600 shadow-lg px-4 py-2 text-white font-bold">
-                  {formatTime(recordingTime)}
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-6 p-8">
-            {/* Error Messages */}
-            {cameraError && (
-              <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-2xl p-6 text-red-700 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-red-100 rounded-xl">
-                    <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                  </div>
-                  <span className="font-semibold">{cameraError}</span>
-                </div>
-              </div>
-            )}
-
-            {screenError && (
-              <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-2xl p-6 text-orange-700 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-100 rounded-xl">
-                    <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <span className="font-semibold">{screenError}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Video Display */}
-            <div
-              ref={videoContainerRef}
-              className={`relative bg-black rounded-lg overflow-hidden ${
-                !isFullscreen
-                  ? "w-full"
-                  : "fixed inset-0 z-50 rounded-none flex items-center justify-center"
-              }`}
-              style={
-                isFullscreen
-                  ? {
-                      backgroundColor: "black",
-                    }
-                  : {
-                      aspectRatio: aspectRatio === "16:9" ? "16/9" : 
-                                   aspectRatio === "9:16" ? "9/16" :
-                                   aspectRatio === "4:3" ? "4/3" : "1/1"
-                    }
-              }
-            >
+              {/* Video Display */}
               <div
-                className={
+                ref={videoContainerRef}
+                className={`relative bg-black rounded-lg overflow-hidden ${
+                  !isFullscreen
+                    ? "w-full"
+                    : "fixed inset-0 z-50 rounded-none flex items-center justify-center"
+                }`}
+                style={
                   isFullscreen
-                    ? aspectRatio === "16:9"
-                      ? "w-full h-full max-h-screen"
-                      : aspectRatio === "9:16"
-                        ? "h-full max-h-screen w-auto max-w-[56.25vh]" // 9/16 of viewport height
-                        : aspectRatio === "4:3"
-                          ? "h-full max-h-screen w-auto max-w-[133.33vh]" // 4/3 of viewport height
-                          : "h-full max-h-screen w-auto max-w-[100vh]" // 1:1 square
-                    : "w-full h-full"
+                    ? {
+                        backgroundColor: "black",
+                      }
+                    : {
+                        aspectRatio:
+                          aspectRatio === "16:9"
+                            ? "16/9"
+                            : aspectRatio === "9:16"
+                              ? "9/16"
+                              : aspectRatio === "4:3"
+                                ? "4/3"
+                                : "1/1",
+                      }
                 }
-                style={{
-                  transform: recordingMode === "screen" ? "none" : `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`,
-                  cursor:
-                    recordingMode === "screen" ? "default" :
-                    zoomLevel > 1 && !isCropMode && !isEffectCropMode ? (isPanning ? "grabbing" : "grab") : "default",
-                }}
-                onMouseDown={recordingMode === "screen" ? undefined : handlePanStart}
               >
-                {/* Screen Recording Mode */}
-                {recordingMode === "screen" && isMounted ? (
-                  <div className="relative w-full h-full">
-                    {screenStream ? (
-                      <video
-                        ref={screenVideoRef}
-                        className="w-full h-full object-contain"
-                        autoPlay
-                        muted={recordingState === "idle" || recordingState === "recording"}
-                        playsInline
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                        <div className="text-white text-center">
-                          <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
-                          <p className="text-lg opacity-75">Click "Screen" to start screen capture</p>
+                <div
+                  className={
+                    isFullscreen
+                      ? aspectRatio === "16:9"
+                        ? "w-full h-full max-h-screen"
+                        : aspectRatio === "9:16"
+                          ? "h-full max-h-screen w-auto max-w-[56.25vh]" // 9/16 of viewport height
+                          : aspectRatio === "4:3"
+                            ? "h-full max-h-screen w-auto max-w-[133.33vh]" // 4/3 of viewport height
+                            : "h-full max-h-screen w-auto max-w-[100vh]" // 1:1 square
+                      : "w-full h-full"
+                  }
+                  style={{
+                    transform:
+                      recordingMode === "screen"
+                        ? "none"
+                        : `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+                    cursor:
+                      recordingMode === "screen"
+                        ? "default"
+                        : zoomLevel > 1 && !isCropMode && !isEffectCropMode
+                          ? isPanning
+                            ? "grabbing"
+                            : "grab"
+                          : "default",
+                  }}
+                  onMouseDown={
+                    recordingMode === "screen" ? undefined : handlePanStart
+                  }
+                >
+                  {/* Screen Recording Mode */}
+                  {recordingMode === "screen" && isMounted ? (
+                    <div className="relative w-full h-full">
+                      {screenStream ? (
+                        <video
+                          ref={screenVideoRef}
+                          className="w-full h-full object-contain"
+                          autoPlay
+                          muted={
+                            recordingState === "idle" ||
+                            recordingState === "recording"
+                          }
+                          playsInline
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                          <div className="text-white text-center">
+                            <svg
+                              className="w-16 h-16 mx-auto mb-4 opacity-50"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                              />
+                            </svg>
+                            <p className="text-lg opacity-75">
+                              Click "Screen" to start screen capture
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                                 ) : recordingMode === "pip" && isMounted ? (
-                   /* Picture-in-Picture Mode */
-                   <div className="relative w-full h-full">
-                     {screenStream ? (
-                       <>
-                         {/* Screen capture background */}
-                         <video
-                           ref={screenVideoRef}
-                           className="w-full h-full object-contain"
-                           autoPlay
-                           muted={recordingState === "idle" || recordingState === "recording"}
-                           playsInline
-                         />
-                         {/* Webcam Overlay - positioned relative to screen video */}
-                         <div 
-                           className="absolute border-2 border-white rounded-lg overflow-hidden shadow-lg cursor-move z-10"
-                           style={{
-                             left: `calc(${pipPosition.x}% - ${pipPosition.width / 2}%)`,
-                             top: `calc(${pipPosition.y}% - ${pipPosition.height / 2}%)`,
-                             width: `${Math.min(pipPosition.width, 40)}%`,
-                             height: `${Math.min(pipPosition.height, 40)}%`,
-                             minWidth: '120px',
-                             minHeight: '90px',
-                             maxWidth: '400px',
-                             maxHeight: '300px',
-                           }}
-                           onMouseDown={(e) => handlePipMouseDown(e, "drag")}
-                         >
-                           <video
-                             ref={videoRef}
-                             className="w-full h-full object-cover"
-                             style={{
-                               transform: isMirrored ? "scaleX(-1)" : "none",
-                             }}
-                             autoPlay
-                             muted={recordingState === "idle" || recordingState === "recording"}
-                             playsInline
-                           />
-                           {/* Resize handle */}
-                           <div 
-                             className="absolute bottom-0 right-0 w-4 h-4 bg-white bg-opacity-70 cursor-se-resize hover:bg-opacity-100 transition-all"
-                             onMouseDown={(e) => handlePipMouseDown(e, "resize")}
-                             style={{
-                               clipPath: 'polygon(100% 0, 0 100%, 100% 100%)'
-                             }}
-                           />
-                           {/* Drag handle indicator */}
-                           <div className="absolute top-1 left-1 text-white text-xs opacity-60 pointer-events-none">
-                             ⋮⋮
-                           </div>
-                         </div>
-                       </>
-                     ) : (
-                       <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                         <div className="text-white text-center">
-                           <div className="relative">
-                             <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                             </svg>
-                             <Camera className="w-8 h-8 absolute -bottom-1 -right-1 opacity-75" />
-                           </div>
-                           <p className="text-lg opacity-75">Click "PIP" to start Picture-in-Picture</p>
-                         </div>
-                       </div>
-                     )}
-                   </div>
-                ) : (
-                  /* Webcam Mode */
+                      )}
+                    </div>
+                  ) : recordingMode === "pip" && isMounted ? (
+                    /* Picture-in-Picture Mode */
+                    <div className="relative w-full h-full">
+                      {screenStream ? (
+                        <>
+                          {/* Screen capture background */}
+                          <video
+                            ref={screenVideoRef}
+                            className="w-full h-full object-contain"
+                            autoPlay
+                            muted={
+                              recordingState === "idle" ||
+                              recordingState === "recording"
+                            }
+                            playsInline
+                          />
+                          {/* Webcam Overlay - positioned relative to screen video */}
+                          <div
+                            className="absolute border-2 border-white rounded-lg overflow-hidden shadow-lg cursor-move z-10"
+                            style={{
+                              left: `calc(${pipPosition.x}% - ${pipPosition.width / 2}%)`,
+                              top: `calc(${pipPosition.y}% - ${pipPosition.height / 2}%)`,
+                              width: `${Math.min(pipPosition.width, 40)}%`,
+                              height: `${Math.min(pipPosition.height, 40)}%`,
+                              minWidth: "120px",
+                              minHeight: "90px",
+                              maxWidth: "400px",
+                              maxHeight: "300px",
+                            }}
+                            onMouseDown={(e) => handlePipMouseDown(e, "drag")}
+                          >
+                            <video
+                              ref={videoRef}
+                              className="w-full h-full object-cover"
+                              style={{
+                                transform: isMirrored ? "scaleX(-1)" : "none",
+                              }}
+                              autoPlay
+                              muted={
+                                recordingState === "idle" ||
+                                recordingState === "recording"
+                              }
+                              playsInline
+                            />
+                            {/* Resize handle */}
+                            <div
+                              className="absolute bottom-0 right-0 w-4 h-4 bg-white bg-opacity-70 cursor-se-resize hover:bg-opacity-100 transition-all"
+                              onMouseDown={(e) =>
+                                handlePipMouseDown(e, "resize")
+                              }
+                              style={{
+                                clipPath: "polygon(100% 0, 0 100%, 100% 100%)",
+                              }}
+                            />
+                            {/* Drag handle indicator */}
+                            <div className="absolute top-1 left-1 text-white text-xs opacity-60 pointer-events-none">
+                              ⋮⋮
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                          <div className="text-white text-center">
+                            <div className="relative">
+                              <svg
+                                className="w-16 h-16 mx-auto mb-4 opacity-50"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                />
+                              </svg>
+                              <Camera className="w-8 h-8 absolute -bottom-1 -right-1 opacity-75" />
+                            </div>
+                            <p className="text-lg opacity-75">
+                              Click "PIP" to start Picture-in-Picture
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : /* Webcam Mode */
                   isMounted ? (
                     <video
                       ref={videoRef}
@@ -3569,10 +4242,16 @@ export default function CameraRecorder() {
                           videoEffect === "blur" && !isEffectCropMode
                             ? `blur(${effectIntensity * 2}px)`
                             : "none",
-                        imageRendering: videoEffect === "pixelate" && !isEffectCropMode ? "pixelated" : "auto",
+                        imageRendering:
+                          videoEffect === "pixelate" && !isEffectCropMode
+                            ? "pixelated"
+                            : "auto",
                       }}
                       autoPlay
-                      muted={recordingState === "idle" || recordingState === "recording"}
+                      muted={
+                        recordingState === "idle" ||
+                        recordingState === "recording"
+                      }
                       playsInline
                     />
                   ) : (
@@ -3582,1432 +4261,1726 @@ export default function CameraRecorder() {
                         <p className="text-lg opacity-75">Camera Loading...</p>
                       </div>
                     </div>
-                  )
-                )}
-              </div>
-
-              {/* Crop Overlay */}
-              {isMounted && isCropMode && recordingState === "idle" && (() => {
-                const videoArea = getVideoDisplayArea()
-                const cropOverlay = (
-                  <div key="crop-overlay" className="absolute inset-0 pointer-events-none">
-                    {/* Crop area overlay - positioned relative to actual video display area */}
-                    <div
-                      className="absolute border-2 border-orange-400 bg-orange-400/10 cursor-move pointer-events-auto"
-                      style={{
-                        left: `${videoArea.videoOffsetX + cropArea.x * videoArea.displayedVideoWidth}px`,
-                        top: `${videoArea.videoOffsetY + cropArea.y * videoArea.displayedVideoHeight}px`,
-                        width: `${cropArea.width * videoArea.displayedVideoWidth}px`,
-                        height: `${cropArea.height * videoArea.displayedVideoHeight}px`,
-                      }}
-                      onMouseDown={(e) => handleCropMouseDown(e)}
-                    >
-                      {/* Resize handles */}
-                      <div
-                        className="absolute -top-1 -left-1 w-3 h-3 bg-orange-400 border border-white cursor-nw-resize pointer-events-auto"
-                        onMouseDown={(e) => handleCropMouseDown(e, "nw")}
-                      />
-                      <div
-                        className="absolute -top-1 -right-1 w-3 h-3 bg-orange-400 border border-white cursor-ne-resize pointer-events-auto"
-                        onMouseDown={(e) => handleCropMouseDown(e, "ne")}
-                      />
-                      <div
-                        className="absolute -bottom-1 -left-1 w-3 h-3 bg-orange-400 border border-white cursor-sw-resize pointer-events-auto"
-                        onMouseDown={(e) => handleCropMouseDown(e, "sw")}
-                      />
-                      <div
-                        className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-400 border border-white cursor-se-resize pointer-events-auto"
-                        onMouseDown={(e) => handleCropMouseDown(e, "se")}
-                      />
-
-                      {/* Center indicator */}
-                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-xs bg-orange-500 px-2 py-1 rounded pointer-events-none">
-                        Crop Area
-                      </div>
-                    </div>
-
-                    {/* Dimmed overlay for non-crop areas */}
-                    <div className="absolute inset-0 bg-black/40 pointer-events-none">
-                      <div
-                        className="absolute bg-transparent"
-                        style={{
-                          left: `${videoArea.videoOffsetX + cropArea.x * videoArea.displayedVideoWidth}px`,
-                          top: `${videoArea.videoOffsetY + cropArea.y * videoArea.displayedVideoHeight}px`,
-                          width: `${cropArea.width * videoArea.displayedVideoWidth}px`,
-                          height: `${cropArea.height * videoArea.displayedVideoHeight}px`,
-                          boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.4)`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                )
-                return cropOverlay
-              })()}
-
-              {/* Real-time Effect Preview Canvas */}
-              <canvas
-                ref={previewEffectCanvasRef}
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  display: "none",
-                  zIndex: 5,
-                }}
-              />
-
-              {/* Effect Crop Overlay */}
-              {isMounted && isEffectCropMode && recordingState === "idle" && videoEffect !== ("none" as VideoEffect) && (() => {
-                const videoArea = getVideoDisplayArea()
-                const effectOverlay = (
-                  <div key="effect-crop-overlay" className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
-                    {/* Effect crop area overlay - positioned relative to actual video display area */}
-                    <div
-                      className="absolute border-2 border-purple-400 bg-purple-400/10 cursor-move pointer-events-auto"
-                      style={{
-                        left: `${videoArea.videoOffsetX + effectCropArea.x * videoArea.displayedVideoWidth}px`,
-                        top: `${videoArea.videoOffsetY + effectCropArea.y * videoArea.displayedVideoHeight}px`,
-                        width: `${effectCropArea.width * videoArea.displayedVideoWidth}px`,
-                        height: `${effectCropArea.height * videoArea.displayedVideoHeight}px`,
-                      }}
-                      onMouseDown={(e) => handleEffectCropMouseDown(e)}
-                    >
-                      {/* Resize handles */}
-                      <div
-                        className="absolute -top-1 -left-1 w-3 h-3 bg-purple-400 border border-white cursor-nw-resize pointer-events-auto"
-                        onMouseDown={(e) => handleEffectCropMouseDown(e, "nw")}
-                      />
-                      <div
-                        className="absolute -top-1 -right-1 w-3 h-3 bg-purple-400 border border-white cursor-ne-resize pointer-events-auto"
-                        onMouseDown={(e) => handleEffectCropMouseDown(e, "ne")}
-                      />
-                      <div
-                        className="absolute -bottom-1 -left-1 w-3 h-3 bg-purple-400 border border-white cursor-sw-resize pointer-events-auto"
-                        onMouseDown={(e) => handleEffectCropMouseDown(e, "sw")}
-                      />
-                      <div
-                        className="absolute -bottom-1 -right-1 w-3 h-3 bg-purple-400 border border-white cursor-se-resize pointer-events-auto"
-                        onMouseDown={(e) => handleEffectCropMouseDown(e, "se")}
-                      />
-
-                      {/* Center indicator */}
-                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-xs bg-purple-500 px-2 py-1 rounded pointer-events-none">
-                        {videoEffect === "blur" ? "Blur" : "Pixelate"} Area
-                      </div>
-                    </div>
-
-                    {/* Dimmed overlay for non-effect areas */}
-                    <div className="absolute inset-0 bg-black/20 pointer-events-none">
-                      <div
-                        className="absolute bg-transparent"
-                        style={{
-                          left: `${videoArea.videoOffsetX + effectCropArea.x * videoArea.displayedVideoWidth}px`,
-                          top: `${videoArea.videoOffsetY + effectCropArea.y * videoArea.displayedVideoHeight}px`,
-                          width: `${effectCropArea.width * videoArea.displayedVideoWidth}px`,
-                          height: `${effectCropArea.height * videoArea.displayedVideoHeight}px`,
-                          boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.2)`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                )
-                return effectOverlay
-              })()}
-
-              {/* Zoom Controls Overlay */}
-              {isMounted && recordingState === "idle" && !isFullscreen && (
-                <div className="absolute top-4 left-4 flex flex-col gap-2 bg-black/50 backdrop-blur-sm rounded-lg p-2">
-                  <Button
-                    onClick={zoomIn}
-                    variant="outline"
-                    size="sm"
-                    disabled={zoomLevel >= 3}
-                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                  >
-                    <ZoomIn className="w-4 h-4" />
-                  </Button>
-                  <div className="text-white text-xs font-mono text-center">{Math.round(zoomLevel * 100)}%</div>
-                  <Button
-                    onClick={zoomOut}
-                    variant="outline"
-                    size="sm"
-                    disabled={zoomLevel <= 0.5}
-                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                  >
-                    <ZoomOut className="w-4 h-4" />
-                  </Button>
-                  {(zoomLevel !== 1 || panOffset.x !== 0 || panOffset.y !== 0) && (
-                    <Button
-                      onClick={resetZoom}
-                      variant="outline"
-                      size="sm"
-                      className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                    >
-                      <ResetZoom className="w-4 h-4" />
-                    </Button>
-                  )}
-                  
-                  {/* Light Mode Controls - Disabled in Normal Mode */}
-                  <div className="border-t border-white/20 pt-2 mt-2">
-                    <Button
-                      onClick={() => {}} // Disabled - light mode only works in fullscreen
-                      variant="outline"
-                      size="sm"
-                      disabled={true}
-                      className="bg-gray-500/20 border-gray-500/50 text-gray-400 cursor-not-allowed"
-                      title="Light Mode (Fullscreen Only)"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
-                    </Button>
-                    <div className="text-gray-400 text-xs text-center mt-1">Fullscreen Only</div>
-                  </div>
-                </div>
-              )}
-
-              {/* Fullscreen Toggle Button */}
-              <button
-                onClick={toggleFullscreen}
-                className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all duration-200 backdrop-blur-sm"
-                style={{ zIndex: 20 }} // Higher z-index to appear above light
-                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-              >
-                {isFullscreen ? (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                    />
-                  </svg>
-                )}
-              </button>
-
-              {/* Flash Effect */}
-              {showFlash && <div className="absolute inset-0 bg-white opacity-80 pointer-events-none animate-pulse" />}
-
-              {/* Light Mode - Complete Ring Around Camera in Fullscreen */}
-              {isLightMode && isFullscreen && (() => {
-                const videoArea = getVideoDisplayArea()
-                const lightBorderWidth = 80 // Width of light ring around video
-                
-                // Validate video area calculations to prevent chaos during aspect ratio changes
-                if (!videoArea || videoArea.displayedVideoWidth <= 0 || videoArea.displayedVideoHeight <= 0) {
-                  return null // Don't render light if video dimensions are invalid
-                }
-                
-                // Special handling for specific aspect ratios
-                const isVertical = aspectRatio === "9:16"
-                const isSquare = aspectRatio === "1:1"
-                const screenWidth = window.innerWidth
-                const screenHeight = window.innerHeight
-                
-                // For vertical and square videos, ensure proper centering calculations
-                let adjustedVideoArea = videoArea
-                if (isVertical || isSquare) {
-                  // Force recalculation for special aspect ratios to ensure proper centering
-                  const videoWidth = videoArea.displayedVideoWidth
-                  const videoHeight = videoArea.displayedVideoHeight
-                  
-                  // Center the video both horizontally and vertically
-                  const centeredOffsetX = Math.max(0, (screenWidth - videoWidth) / 2)
-                  const centeredOffsetY = Math.max(0, (screenHeight - videoHeight) / 2)
-                  
-                  adjustedVideoArea = {
-                    ...videoArea,
-                    videoOffsetX: centeredOffsetX,
-                    videoOffsetY: centeredOffsetY,
-                    displayedVideoWidth: videoWidth,
-                    displayedVideoHeight: Math.min(videoHeight, screenHeight)
-                  }
-                }
-                
-                // For 9:16 and 1:1, create full-screen light around video (no overlay on video)
-                if (isVertical || isSquare) {
-                  return (
-                    <div 
-                      key={`light-${aspectRatio}-${adjustedVideoArea.displayedVideoWidth}-${adjustedVideoArea.displayedVideoHeight}`}
-                      className="absolute inset-0 pointer-events-none transition-opacity duration-300"
-                      style={{ zIndex: 10 }}
-                    >
-                      {/* Top area - full width */}
-                      <div 
-                        className="absolute bg-white transition-all duration-300"
-                        style={{
-                          left: 0,
-                          top: 0,
-                          width: `${screenWidth}px`,
-                          height: `${Math.max(0, adjustedVideoArea.videoOffsetY)}px`,
-                          opacity: lightIntensity / 100
-                        }}
-                      />
-                      
-                      {/* Bottom area - full width */}
-                      <div 
-                        className="absolute bg-white transition-all duration-300"
-                        style={{
-                          left: 0,
-                          top: `${adjustedVideoArea.videoOffsetY + adjustedVideoArea.displayedVideoHeight}px`,
-                          width: `${screenWidth}px`,
-                          height: `${Math.max(0, screenHeight - (adjustedVideoArea.videoOffsetY + adjustedVideoArea.displayedVideoHeight))}px`,
-                          opacity: lightIntensity / 100
-                        }}
-                      />
-                      
-                      {/* Left area - next to video */}
-                      <div 
-                        className="absolute bg-white transition-all duration-300"
-                        style={{
-                          left: 0,
-                          top: `${adjustedVideoArea.videoOffsetY}px`,
-                          width: `${Math.max(0, adjustedVideoArea.videoOffsetX)}px`,
-                          height: `${adjustedVideoArea.displayedVideoHeight}px`,
-                          opacity: lightIntensity / 100
-                        }}
-                      />
-                      
-                      {/* Right area - next to video */}
-                      <div 
-                        className="absolute bg-white transition-all duration-300"
-                        style={{
-                          left: `${adjustedVideoArea.videoOffsetX + adjustedVideoArea.displayedVideoWidth}px`,
-                          top: `${adjustedVideoArea.videoOffsetY}px`,
-                          width: `${Math.max(0, screenWidth - (adjustedVideoArea.videoOffsetX + adjustedVideoArea.displayedVideoWidth))}px`,
-                          height: `${adjustedVideoArea.displayedVideoHeight}px`,
-                          opacity: lightIntensity / 100
-                        }}
-                      />
-                    </div>
-                  )
-                }
-                
-                // For other aspect ratios, use simplified full-area approach with video cutout
-                const videoLeft = adjustedVideoArea.videoOffsetX
-                const videoTop = adjustedVideoArea.videoOffsetY
-                const videoWidth = adjustedVideoArea.displayedVideoWidth
-                const videoHeight = adjustedVideoArea.displayedVideoHeight
-                
-                return (
-                  <div 
-                    key={`light-${aspectRatio}-${videoWidth}-${videoHeight}`}
-                    className="absolute inset-0 pointer-events-none transition-opacity duration-300"
-                    style={{ zIndex: 10 }} // Lower z-index so controls can overlay
-                  >
-                    {/* Top area - full width above video */}
-                    <div 
-                      className="absolute bg-white transition-all duration-300"
-                      style={{
-                        left: 0,
-                        top: 0,
-                        width: `${screenWidth}px`,
-                        height: `${Math.max(0, videoTop - lightBorderWidth)}px`,
-                        opacity: lightIntensity / 100
-                      }}
-                    />
-                    
-                    {/* Bottom area - full width below video */}
-                    <div 
-                      className="absolute bg-white transition-all duration-300"
-                      style={{
-                        left: 0,
-                        top: `${videoTop + videoHeight + lightBorderWidth}px`,
-                        width: `${screenWidth}px`,
-                        height: `${Math.max(0, screenHeight - (videoTop + videoHeight + lightBorderWidth))}px`,
-                        opacity: lightIntensity / 100
-                      }}
-                    />
-                    
-                    {/* Left area - full height beside video */}
-                    <div 
-                      className="absolute bg-white transition-all duration-300"
-                      style={{
-                        left: 0,
-                        top: 0,
-                        width: `${Math.max(0, videoLeft - lightBorderWidth)}px`,
-                        height: `${screenHeight}px`,
-                        opacity: lightIntensity / 100
-                      }}
-                    />
-                    
-                    {/* Right area - full height beside video */}
-                    <div 
-                      className="absolute bg-white transition-all duration-300"
-                      style={{
-                        left: `${videoLeft + videoWidth + lightBorderWidth}px`,
-                        top: 0,
-                        width: `${Math.max(0, screenWidth - (videoLeft + videoWidth + lightBorderWidth))}px`,
-                        height: `${screenHeight}px`,
-                        opacity: lightIntensity / 100
-                      }}
-                    />
-                    
-                    {/* Ring areas around video */}
-                    {/* Top ring */}
-                    <div 
-                      className="absolute bg-white transition-all duration-300"
-                      style={{
-                        left: `${Math.max(0, videoLeft - lightBorderWidth)}px`,
-                        top: `${Math.max(0, videoTop - lightBorderWidth)}px`,
-                        width: `${videoWidth + (lightBorderWidth * 2)}px`,
-                        height: `${lightBorderWidth}px`,
-                        opacity: lightIntensity / 100
-                      }}
-                    />
-                    
-                    {/* Bottom ring */}
-                    <div 
-                      className="absolute bg-white transition-all duration-300"
-                      style={{
-                        left: `${Math.max(0, videoLeft - lightBorderWidth)}px`,
-                        top: `${videoTop + videoHeight}px`,
-                        width: `${videoWidth + (lightBorderWidth * 2)}px`,
-                        height: `${lightBorderWidth}px`,
-                        opacity: lightIntensity / 100
-                      }}
-                    />
-                    
-                    {/* Left ring */}
-                    <div 
-                      className="absolute bg-white transition-all duration-300"
-                      style={{
-                        left: `${Math.max(0, videoLeft - lightBorderWidth)}px`,
-                        top: `${videoTop}px`,
-                        width: `${lightBorderWidth}px`,
-                        height: `${videoHeight}px`,
-                        opacity: lightIntensity / 100
-                      }}
-                    />
-                    
-                    {/* Right ring */}
-                    <div 
-                      className="absolute bg-white transition-all duration-300"
-                      style={{
-                        left: `${videoLeft + videoWidth}px`,
-                        top: `${videoTop}px`,
-                        width: `${lightBorderWidth}px`,
-                        height: `${videoHeight}px`,
-                        opacity: lightIntensity / 100
-                      }}
-                    />
-                  </div>
-                )
-              })()}
-
-              {/* Recording Overlay */}
-              {recordingState === "recording" && (
-                <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                  REC {formatTime(recordingTime)} {isCropMode && "(Cropped)"}
-                </div>
-              )}
-
-              {/* Processing Overlay */}
-              {recordingState === "processing" && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                  <div className="bg-white rounded-lg p-6 text-center space-y-4">
-                    <div className="text-lg font-semibold">
-                      {exportFormat === "mp4" ? "Converting to MP4..." : "Processing Video..."}
-                    </div>
-                    <div className="w-64 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${processingProgress}%` }}
-                      />
-                    </div>
-                    <div className="text-sm text-slate-600">{Math.round(processingProgress)}%</div>
-                    {exportFormat === "mp4" && (
-                      <div className="text-xs text-slate-500">
-                        {mp4RecordingSupported ? "Using native MP4 encoding" : "Converting from WebM to MP4"}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Timer Countdown Overlay */}
-              {isTimerActive && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center animate-in fade-in duration-300">
-                  <div className="relative">
-                    {/* Outer Ring with Progress */}
-                    <div className="relative w-48 h-48">
-                      {/* Background Circle */}
-                      <svg className="w-48 h-48 transform -rotate-90" viewBox="0 0 100 100">
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="45"
-                          stroke="rgba(255,255,255,0.1)"
-                          strokeWidth="2"
-                          fill="none"
-                        />
-                        {/* Progress Circle */}
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="45"
-                          stroke="url(#timerGradient)"
-                          strokeWidth="3"
-                          fill="none"
-                          strokeLinecap="round"
-                          strokeDasharray="283"
-                          strokeDashoffset={283 - (283 * (screenshotTimer - timerCountdown)) / screenshotTimer}
-                          className="transition-all duration-1000 ease-linear"
-                        />
-                        <defs>
-                          <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#3B82F6" />
-                            <stop offset="50%" stopColor="#8B5CF6" />
-                            <stop offset="100%" stopColor="#EC4899" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                      
-                      {/* Inner Content */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                                                 <div className="bg-white/95 rounded-full w-36 h-36 flex items-center justify-center shadow-2xl border border-white/20">
-                          <div className="text-center">
-                            {/* Main Number */}
-                            <div className="text-6xl font-black bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-pulse scale-110 transition-transform duration-300">
-                              {timerCountdown}
-                            </div>
-                            {/* Status Text */}
-                            <div className="text-sm font-semibold text-slate-600 mt-2 tracking-wide">
-                              Taking screenshot...
-                            </div>
-                            {/* Progress Dots */}
-                            <div className="flex justify-center gap-1 mt-3">
-                              {Array.from({ length: screenshotTimer }).map((_, index) => (
-                                <div
-                                  key={index}
-                                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                                    index < screenshotTimer - timerCountdown
-                                      ? "bg-gradient-to-r from-blue-500 to-purple-500 scale-110"
-                                      : "bg-slate-300"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Cancel Button - Floating outside */}
-                    <button
-                      onClick={cancelScreenshotTimer}
-                      className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-3 rounded-full text-sm font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 border border-red-400/50"
-                    >
-                      <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                      Cancel Timer
-                    </button>
-                    
-                    {/* Camera Icon */}
-                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2">
-                      <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-full shadow-lg">
-                        <ImageIcon className="w-6 h-6 text-white" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Fullscreen Controls Overlay */}
-              {isFullscreen && (
-                <div
-                  className={`absolute bottom-6 ${
-                    aspectRatio === "9:16"
-                      ? "left-1/2 transform -translate-x-1/2 w-80" // Centered for vertical
-                      : "left-1/2 transform -translate-x-1/2" // Centered for all
-                  } flex flex-col items-center gap-4`}
-                  style={{ zIndex: 20 }} // Higher z-index to appear above light
-                >
-                  {/* Main Controls Row */}
-                  <div className="flex items-center gap-4 bg-black/70 backdrop-blur-sm rounded-full px-6 py-3">
-                    {/* Camera Controls in Fullscreen */}
-                    {recordingState === "idle" && (
-                      <>
-                        <Button
-                          onClick={toggleCropMode}
-                          variant={isCropMode ? "default" : "outline"}
-                          size="sm"
-                          className={
-                            isCropMode
-                              ? "bg-orange-500 hover:bg-orange-600 text-white"
-                              : "bg-white/10 border-white/20 text-white hover:bg-white/20"
-                          }
-                        >
-                          <Crop className="w-4 h-4 mr-2" />
-                          {isCropMode ? "Exit Crop" : "Crop Mode"}
-                        </Button>
-                        <Button
-                          onClick={() => takeScreenshot()}
-                          variant="outline"
-                          size="sm"
-                          className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                          disabled={!!cameraError || isTimerActive || isCapturingScreenshot}
-                        >
-                          <ImageIcon className="w-4 h-4 mr-2" />
-                          {isCapturingScreenshot ? "Capturing..." : isTimerActive ? `${timerCountdown}s` : "Screenshot"}
-                        </Button>
-                        <Button
-                          onClick={startRecording}
-                          size="sm"
-                          className="bg-red-500 hover:bg-red-600 text-white"
-                          disabled={!!cameraError}
-                        >
-                          <Camera className="w-4 h-4 mr-2" />
-                          Record
-                        </Button>
-                      </>
-                    )}
-
-                    {/* Recording Controls in Fullscreen */}
-                    {recordingState === "recording" && (
-                      <Button onClick={stopRecording} size="sm" className="bg-red-600 hover:bg-red-700 text-white">
-                        <Square className="w-4 h-4 mr-2" />
-                        Stop
-                      </Button>
-                    )}
-
-                    {/* Playback Controls in Fullscreen */}
-                    {recordingState === "stopped" && (
-                      <>
-                        <Button
-                          onClick={togglePlayback}
-                          variant="outline"
-                          size="sm"
-                          className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                        >
-                          {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                        </Button>
-                        <div className="text-white text-sm font-medium">
-                          {formatTime(currentTime)} / {formatTime(videoDuration)}
-                        </div>
-                      </>
-                    )}
-
-                    {/* Exit Fullscreen Button */}
-                    <Button
-                      onClick={toggleFullscreen}
-                      variant="outline"
-                      size="sm"
-                      className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                    >
-                      Exit Fullscreen
-                    </Button>
-                  </div>
-
-                  {/* Settings Row - Only show when idle */}
-                  {recordingState === "idle" && (
-                    <div className="flex items-center gap-2 bg-black/70 backdrop-blur-sm rounded-full px-4 py-2">
-                      {/* Aspect Ratio Buttons */}
-                      <div className="flex items-center gap-1">
-                        <span className="text-white text-xs font-medium mr-1">Aspect:</span>
-                        {(["16:9", "9:16", "4:3", "1:1"] as const).map((ratio) => (
-                          <button
-                            key={ratio}
-                            onClick={() => setAspectRatio(ratio)}
-                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                              aspectRatio === ratio
-                                ? "bg-blue-500 text-white"
-                                : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                            }`}
-                          >
-                            {ratio}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="w-px h-4 bg-white/20" />
-
-                      {/* Zoom Controls */}
-                      <div className="flex items-center gap-1">
-                        <span className="text-white text-xs font-medium mr-1">Zoom:</span>
-                        <button
-                          onClick={zoomOut}
-                          disabled={zoomLevel <= 0.5}
-                          className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                            zoomLevel <= 0.5
-                              ? "bg-white/5 text-white/30 cursor-not-allowed"
-                              : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                          }`}
-                        >
-                          <ZoomOut className="w-3 h-3" />
-                        </button>
-                        <span className="text-white text-xs font-mono w-12 text-center">
-                          {Math.round(zoomLevel * 100)}%
-                        </span>
-                        <button
-                          onClick={zoomIn}
-                          disabled={zoomLevel >= 3}
-                          className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                            zoomLevel >= 3
-                              ? "bg-white/5 text-white/30 cursor-not-allowed"
-                              : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                          }`}
-                        >
-                          <ZoomIn className="w-3 h-3" />
-                        </button>
-                        {(zoomLevel !== 1 || panOffset.x !== 0 || panOffset.y !== 0) && (
-                          <button
-                            onClick={resetZoom}
-                            className="px-2 py-1 rounded text-xs font-medium transition-all bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                          >
-                            <ResetZoom className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="w-px h-4 bg-white/20" />
-
-                      {/* Mirror Controls */}
-                      <div className="flex items-center gap-1">
-                        <span className="text-white text-xs font-medium mr-1">Mirror:</span>
-                        <button
-                          onClick={toggleMirror}
-                          className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                            isMirrored
-                              ? "bg-green-500 text-white"
-                              : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                          }`}
-                        >
-                          {isMirrored ? "On" : "Off"}
-                        </button>
-                      </div>
-
-                      <div className="w-px h-4 bg-white/20" />
-
-                      {/* Light Mode Controls */}
-                      <div className="flex items-center gap-1">
-                        <span className="text-white text-xs font-medium mr-1">Light:</span>
-                        <button
-                          onClick={toggleLightMode}
-                          className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                            isLightMode
-                              ? "bg-yellow-500 text-white"
-                              : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                          }`}
-                        >
-                          {isLightMode ? "On" : "Off"}
-                        </button>
-                        {isLightMode && (
-                          <>
-                            <button
-                              onClick={() => adjustLightIntensity(lightIntensity - 20)}
-                              disabled={lightIntensity <= 10}
-                              className={`px-1 py-1 rounded text-xs font-medium transition-all ${
-                                lightIntensity <= 10
-                                  ? "bg-white/5 text-white/30 cursor-not-allowed"
-                                  : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                              }`}
-                            >
-                              -
-                            </button>
-                            <span className="text-white text-xs font-mono w-10 text-center">{lightIntensity}%</span>
-                            <button
-                              onClick={() => adjustLightIntensity(lightIntensity + 20)}
-                              disabled={lightIntensity >= 100}
-                              className={`px-1 py-1 rounded text-xs font-medium transition-all ${
-                                lightIntensity >= 100
-                                  ? "bg-white/5 text-white/30 cursor-not-allowed"
-                                  : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                              }`}
-                            >
-                              +
-                            </button>
-                          </>
-                        )}
-                      </div>
-
-                      <div className="w-px h-4 bg-white/20" />
-
-                      {/* Effect Controls */}
-                      <div className="flex items-center gap-1">
-                        <span className="text-white text-xs font-medium mr-1">Effect:</span>
-                        {(["none", "blur", "pixelate"] as const).map((effect) => (
-                          <button
-                            key={effect}
-                            onClick={() => setVideoEffect(effect)}
-                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                              videoEffect === effect
-                                ? "bg-purple-500 text-white"
-                                : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                            }`}
-                          >
-                            {effect === "none" ? "Off" : effect === "blur" ? "Blur" : "Pixel"}
-                          </button>
-                        ))}
-                      </div>
-
-                      {videoEffect !== ("none" as VideoEffect) && (
-                        <>
-                          <div className="flex items-center gap-1">
-                            <span className="text-white text-xs font-medium mr-1">Level:</span>
-                            <button
-                              onClick={() => setEffectIntensity(Math.max(1, effectIntensity - 1))}
-                              disabled={effectIntensity <= 1}
-                              className={`px-1 py-1 rounded text-xs font-medium transition-all ${
-                                effectIntensity <= 1
-                                  ? "bg-white/5 text-white/30 cursor-not-allowed"
-                                  : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                              }`}
-                            >
-                              -
-                            </button>
-                            <span className="text-white text-xs font-mono w-6 text-center">{effectIntensity}</span>
-                            <button
-                              onClick={() => setEffectIntensity(Math.min(10, effectIntensity + 1))}
-                              disabled={effectIntensity >= 10}
-                              className={`px-1 py-1 rounded text-xs font-medium transition-all ${
-                                effectIntensity >= 10
-                                  ? "bg-white/5 text-white/30 cursor-not-allowed"
-                                  : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                              }`}
-                            >
-                              +
-                            </button>
-                          </div>
-
-                          <div className="flex items-center gap-1">
-                            <span className="text-white text-xs font-medium mr-1">Area:</span>
-                            <button
-                              onClick={toggleEffectCropMode}
-                              className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                                isEffectCropMode
-                                  ? "bg-purple-500 text-white"
-                                  : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                              }`}
-                            >
-                              {isEffectCropMode ? "On" : "Off"}
-                            </button>
-                          </div>
-                        </>
-                      )}
-
-                      <div className="w-px h-4 bg-white/20" />
-
-                      {/* Timer Buttons */}
-                      <div className="flex items-center gap-1">
-                        <span className="text-white text-xs font-medium mr-1">Timer:</span>
-                        {([0, 3, 5, 10] as const).map((timer) => (
-                          <button
-                            key={timer}
-                            onClick={() => setScreenshotTimer(timer)}
-                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                              screenshotTimer === timer
-                                ? "bg-green-500 text-white"
-                                : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                            }`}
-                          >
-                            {timer === 0 ? "Off" : `${timer}s`}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="w-px h-4 bg-white/20" />
-
-                      {/* Format Buttons */}
-                      <div className="flex items-center gap-1">
-                        <span className="text-white text-xs font-medium mr-1">Format:</span>
-                        {(["png", "jpeg"] as const).map((format) => (
-                          <button
-                            key={format}
-                            onClick={() => setScreenshotFormat(format)}
-                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                              screenshotFormat === format
-                                ? "bg-purple-500 text-white"
-                                : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                            }`}
-                          >
-                            {format.toUpperCase()}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="w-px h-4 bg-white/20" />
-
-                      {/* Quality Buttons */}
-                      <div className="flex items-center gap-1">
-                        <span className="text-white text-xs font-medium mr-1">Quality:</span>
-                        <button
-                          onClick={() => setIsHDScreenshot(!isHDScreenshot)}
-                          className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                            isHDScreenshot
-                              ? "bg-purple-500 text-white"
-                              : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                          }`}
-                          title={isHDScreenshot ? "4K Quality (3840x2160 for 16:9)" : "HD Quality (1920x1080 for 16:9)"}
-                        >
-                          {isHDScreenshot ? "4K" : "HD"}
-                        </button>
-                      </div>
-                    </div>
                   )}
                 </div>
-              )}
 
-              {/* Fullscreen Timeline */}
-              {isFullscreen && recordingState === "stopped" && videoDuration > 0 && (
-                <div
-                  className={`absolute bottom-20 ${
-                    aspectRatio === "9:16"
-                      ? "left-1/2 transform -translate-x-1/2 w-80" // Centered for vertical
-                      : "left-6 right-6" // Full width for landscape/square
-                  }`}
-                  style={{ zIndex: 20 }} // Higher z-index to appear above light
-                >
-                  <Slider
-                    value={[currentTime]}
-                    max={videoDuration || 0}
-                    step={0.1}
-                    onValueChange={([value]) => {
-                      if (isFinite(value) && videoDuration > 0) {
-                        seekTo(value)
-                      }
-                    }}
-                    className="w-full"
-                  />
-                </div>
-              )}
-            </div>
+                {/* Crop Overlay */}
+                {isMounted &&
+                  isCropMode &&
+                  recordingState === "idle" &&
+                  (() => {
+                    const videoArea = getVideoDisplayArea()
+                    const cropOverlay = (
+                      <div
+                        key="crop-overlay"
+                        className="absolute inset-0 pointer-events-none"
+                      >
+                        {/* Crop area overlay - positioned relative to actual video display area */}
+                        <div
+                          className="absolute border-2 border-orange-400 bg-orange-400/10 cursor-move pointer-events-auto"
+                          style={{
+                            left: `${videoArea.videoOffsetX + cropArea.x * videoArea.displayedVideoWidth}px`,
+                            top: `${videoArea.videoOffsetY + cropArea.y * videoArea.displayedVideoHeight}px`,
+                            width: `${cropArea.width * videoArea.displayedVideoWidth}px`,
+                            height: `${cropArea.height * videoArea.displayedVideoHeight}px`,
+                          }}
+                          onMouseDown={(e) => handleCropMouseDown(e)}
+                        >
+                          {/* Resize handles */}
+                          <div
+                            className="absolute -top-1 -left-1 w-3 h-3 bg-orange-400 border border-white cursor-nw-resize pointer-events-auto"
+                            onMouseDown={(e) => handleCropMouseDown(e, "nw")}
+                          />
+                          <div
+                            className="absolute -top-1 -right-1 w-3 h-3 bg-orange-400 border border-white cursor-ne-resize pointer-events-auto"
+                            onMouseDown={(e) => handleCropMouseDown(e, "ne")}
+                          />
+                          <div
+                            className="absolute -bottom-1 -left-1 w-3 h-3 bg-orange-400 border border-white cursor-sw-resize pointer-events-auto"
+                            onMouseDown={(e) => handleCropMouseDown(e, "sw")}
+                          />
+                          <div
+                            className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-400 border border-white cursor-se-resize pointer-events-auto"
+                            onMouseDown={(e) => handleCropMouseDown(e, "se")}
+                          />
 
-                        {/* Quick Controls Below Video Preview */}
-            {!isFullscreen && (
-              <div className="bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-2xl p-6 space-y-6 border border-white/50 shadow-sm">
-                {/* Main Camera Controls */}
-                {recordingState === "idle" && (
-                  <div className="flex justify-center gap-4 flex-wrap">
+                          {/* Center indicator */}
+                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-xs bg-orange-500 px-2 py-1 rounded pointer-events-none">
+                            Crop Area
+                          </div>
+                        </div>
+
+                        {/* Dimmed overlay for non-crop areas */}
+                        <div className="absolute inset-0 bg-black/40 pointer-events-none">
+                          <div
+                            className="absolute bg-transparent"
+                            style={{
+                              left: `${videoArea.videoOffsetX + cropArea.x * videoArea.displayedVideoWidth}px`,
+                              top: `${videoArea.videoOffsetY + cropArea.y * videoArea.displayedVideoHeight}px`,
+                              width: `${cropArea.width * videoArea.displayedVideoWidth}px`,
+                              height: `${cropArea.height * videoArea.displayedVideoHeight}px`,
+                              boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.4)`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )
+                    return cropOverlay
+                  })()}
+
+                {/* Real-time Effect Preview Canvas */}
+                <canvas
+                  ref={previewEffectCanvasRef}
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    display: "none",
+                    zIndex: 5,
+                  }}
+                />
+
+                {/* Effect Crop Overlay */}
+                {isMounted &&
+                  isEffectCropMode &&
+                  recordingState === "idle" &&
+                  videoEffect !== ("none" as VideoEffect) &&
+                  (() => {
+                    const videoArea = getVideoDisplayArea()
+                    const effectOverlay = (
+                      <div
+                        key="effect-crop-overlay"
+                        className="absolute inset-0 pointer-events-none"
+                        style={{ zIndex: 10 }}
+                      >
+                        {/* Effect crop area overlay - positioned relative to actual video display area */}
+                        <div
+                          className="absolute border-2 border-purple-400 bg-purple-400/10 cursor-move pointer-events-auto"
+                          style={{
+                            left: `${videoArea.videoOffsetX + effectCropArea.x * videoArea.displayedVideoWidth}px`,
+                            top: `${videoArea.videoOffsetY + effectCropArea.y * videoArea.displayedVideoHeight}px`,
+                            width: `${effectCropArea.width * videoArea.displayedVideoWidth}px`,
+                            height: `${effectCropArea.height * videoArea.displayedVideoHeight}px`,
+                          }}
+                          onMouseDown={(e) => handleEffectCropMouseDown(e)}
+                        >
+                          {/* Resize handles */}
+                          <div
+                            className="absolute -top-1 -left-1 w-3 h-3 bg-purple-400 border border-white cursor-nw-resize pointer-events-auto"
+                            onMouseDown={(e) =>
+                              handleEffectCropMouseDown(e, "nw")
+                            }
+                          />
+                          <div
+                            className="absolute -top-1 -right-1 w-3 h-3 bg-purple-400 border border-white cursor-ne-resize pointer-events-auto"
+                            onMouseDown={(e) =>
+                              handleEffectCropMouseDown(e, "ne")
+                            }
+                          />
+                          <div
+                            className="absolute -bottom-1 -left-1 w-3 h-3 bg-purple-400 border border-white cursor-sw-resize pointer-events-auto"
+                            onMouseDown={(e) =>
+                              handleEffectCropMouseDown(e, "sw")
+                            }
+                          />
+                          <div
+                            className="absolute -bottom-1 -right-1 w-3 h-3 bg-purple-400 border border-white cursor-se-resize pointer-events-auto"
+                            onMouseDown={(e) =>
+                              handleEffectCropMouseDown(e, "se")
+                            }
+                          />
+
+                          {/* Center indicator */}
+                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-xs bg-purple-500 px-2 py-1 rounded pointer-events-none">
+                            {videoEffect === "blur" ? "Blur" : "Pixelate"} Area
+                          </div>
+                        </div>
+
+                        {/* Dimmed overlay for non-effect areas */}
+                        <div className="absolute inset-0 bg-black/20 pointer-events-none">
+                          <div
+                            className="absolute bg-transparent"
+                            style={{
+                              left: `${videoArea.videoOffsetX + effectCropArea.x * videoArea.displayedVideoWidth}px`,
+                              top: `${videoArea.videoOffsetY + effectCropArea.y * videoArea.displayedVideoHeight}px`,
+                              width: `${effectCropArea.width * videoArea.displayedVideoWidth}px`,
+                              height: `${effectCropArea.height * videoArea.displayedVideoHeight}px`,
+                              boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.2)`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )
+                    return effectOverlay
+                  })()}
+
+                {/* Zoom Controls Overlay */}
+                {isMounted && recordingState === "idle" && !isFullscreen && (
+                  <div className="absolute top-4 left-4 flex flex-col gap-2 bg-black/50 backdrop-blur-sm rounded-lg p-2">
                     <Button
-                      onClick={toggleCropMode}
-                      variant={isCropMode ? "default" : "outline"}
-                      size="sm"
-                      className={isCropMode 
-                        ? "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg" 
-                        : "bg-white/80 hover:bg-white border-orange-300 text-orange-700 hover:text-orange-800 transition-all duration-300"
-                      }
-                    >
-                      <Crop className="w-4 h-4 mr-2" />
-                      {isCropMode ? "Exit Crop" : "Crop"}
-                    </Button>
-
-                    <Button
-                      onClick={() => takeScreenshot()}
+                      onClick={zoomIn}
                       variant="outline"
                       size="sm"
-                      className="bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-300 text-blue-700 hover:text-blue-800 transition-all duration-300 shadow-sm"
-                      disabled={!!cameraError || isTimerActive || isCapturingScreenshot}
+                      disabled={zoomLevel >= 3}
+                      className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                     >
-                      <ImageIcon className="w-4 h-4 mr-2" />
-                      {isCapturingScreenshot
-                        ? "Capturing..."
-                        : isTimerActive
-                          ? `${timerCountdown}s`
-                          : "Screenshot"}
+                      <ZoomIn className="w-4 h-4" />
                     </Button>
-
+                    <div className="text-white text-xs font-mono text-center">
+                      {Math.round(zoomLevel * 100)}%
+                    </div>
                     <Button
-                      onClick={startRecording}
+                      onClick={zoomOut}
+                      variant="outline"
                       size="sm"
-                      className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg transition-all duration-300 hover:shadow-xl"
-                      disabled={!!cameraError}
+                      disabled={zoomLevel <= 0.5}
+                      className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                     >
-                      <Camera className="w-4 h-4 mr-2" />
-                      Record
+                      <ZoomOut className="w-4 h-4" />
                     </Button>
-                  </div>
-                )}
-
-                              {/* Quick Settings Row */}
-              {recordingState === "idle" && (
-                <div className="flex items-center justify-center gap-6 flex-wrap text-sm">
-                  {/* Recording Mode */}
-                  <div className="flex items-center gap-2">
-                    <label className="font-medium text-slate-700">Mode:</label>
-                    <Select value={recordingMode} onValueChange={(value: RecordingMode) => {
-                      if (value === "webcam") switchToWebcam()
-                      else if (value === "screen") switchToScreen()
-                      else if (value === "pip") switchToPip()
-                    }}>
-                      <SelectTrigger className="w-28 h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="webcam">Webcam</SelectItem>
-                        <SelectItem value="screen">Screen</SelectItem>
-                        <SelectItem value="pip">PIP</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Aspect Ratio */}
-                  <div className="flex items-center gap-2">
-                    <label className="font-medium text-slate-700">Aspect:</label>
-                    <Select value={aspectRatio} onValueChange={(value: AspectRatio) => setAspectRatio(value)}>
-                      <SelectTrigger className="w-24 h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="16:9">16:9</SelectItem>
-                        <SelectItem value="9:16">9:16</SelectItem>
-                        <SelectItem value="4:3">4:3</SelectItem>
-                        <SelectItem value="1:1">1:1</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                    {/* Zoom Controls */}
-                    <div className="flex items-center gap-2">
-                      <label className="font-medium text-slate-700">Zoom:</label>
-                      <div className="flex items-center gap-1">
-                        <Button onClick={zoomOut} variant="outline" size="sm" disabled={zoomLevel <= 0.5} className="h-6 w-6 p-0">
-                          <ZoomOut className="w-3 h-3" />
-                        </Button>
-                        <span className="text-xs font-mono w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
-                        <Button onClick={zoomIn} variant="outline" size="sm" disabled={zoomLevel >= 3} className="h-6 w-6 p-0">
-                          <ZoomIn className="w-3 h-3" />
-                        </Button>
-                        {(zoomLevel !== 1 || panOffset.x !== 0 || panOffset.y !== 0) && (
-                          <Button onClick={resetZoom} variant="outline" size="sm" className="h-6 w-6 p-0">
-                            <ResetZoom className="w-3 h-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Mirror Toggle */}
-                    <div className="flex items-center gap-2">
-                      <label className="font-medium text-slate-700">Mirror:</label>
+                    {(zoomLevel !== 1 ||
+                      panOffset.x !== 0 ||
+                      panOffset.y !== 0) && (
                       <Button
-                        onClick={toggleMirror}
-                        variant={isMirrored ? "default" : "outline"}
+                        onClick={resetZoom}
+                        variant="outline"
                         size="sm"
-                        className={`h-6 px-2 text-xs ${isMirrored ? "bg-green-500 hover:bg-green-600" : ""}`}
+                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                       >
-                        {isMirrored ? "On" : "Off"}
+                        <ResetZoom className="w-4 h-4" />
                       </Button>
-                    </div>
+                    )}
 
-                    {/* Timer */}
-                    <div className="flex items-center gap-2">
-                      <label className="font-medium text-slate-700">Timer:</label>
-                      <Select value={screenshotTimer.toString()} onValueChange={(value) => setScreenshotTimer(Number.parseInt(value))}>
-                        <SelectTrigger className="w-16 h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">Off</SelectItem>
-                          <SelectItem value="3">3s</SelectItem>
-                          <SelectItem value="5">5s</SelectItem>
-                          <SelectItem value="10">10s</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Format */}
-                    <div className="flex items-center gap-2">
-                      <label className="font-medium text-slate-700">Format:</label>
-                      <Select value={screenshotFormat} onValueChange={(value: ScreenshotFormat) => setScreenshotFormat(value)}>
-                        <SelectTrigger className="w-20 h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="png">PNG</SelectItem>
-                          <SelectItem value="jpeg">JPEG</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* HD Quality */}
-                    <div className="flex items-center gap-2">
-                      <label className="font-medium text-slate-700">Quality:</label>
-                      <Button
-                        onClick={() => setIsHDScreenshot(!isHDScreenshot)}
-                        variant={isHDScreenshot ? "default" : "outline"}
-                        size="sm"
-                        className={`h-6 px-2 text-xs ${isHDScreenshot ? "bg-purple-500 hover:bg-purple-600" : ""}`}
-                        title={isHDScreenshot ? "4K Quality (3840x2160 for 16:9)" : "HD Quality (1920x1080 for 16:9)"}
-                      >
-                        {isHDScreenshot ? "4K" : "HD"}
-                      </Button>
-                    </div>
-
-                    {/* Light Mode - Fullscreen Only */}
-                    <div className="flex items-center gap-2">
-                      <label className="font-medium text-slate-500">Light:</label>
+                    {/* Light Mode Controls - Disabled in Normal Mode */}
+                    <div className="border-t border-white/20 pt-2 mt-2">
                       <Button
                         onClick={() => {}} // Disabled - light mode only works in fullscreen
                         variant="outline"
                         size="sm"
                         disabled={true}
-                        className="h-6 px-2 text-xs bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
+                        className="bg-gray-500/20 border-gray-500/50 text-gray-400 cursor-not-allowed"
                         title="Light Mode (Fullscreen Only)"
                       >
-                        Fullscreen Only
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                          />
+                        </svg>
                       </Button>
+                      <div className="text-gray-400 text-xs text-center mt-1">
+                        Fullscreen Only
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {/* Effects Row */}
-                {recordingState === "idle" && (
-                  <div className="flex items-center justify-center gap-4 flex-wrap text-sm border-t pt-3">
-                    <div className="flex items-center gap-2">
-                      <label className="font-medium text-slate-700">Effect:</label>
-                      <Select value={videoEffect} onValueChange={(value: VideoEffect) => setVideoEffect(value)}>
-                        <SelectTrigger className="w-24 h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          <SelectItem value="blur">Blur</SelectItem>
-                          <SelectItem value="pixelate">Pixelate</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                {/* Fullscreen Toggle Button */}
+                <button
+                  onClick={toggleFullscreen}
+                  className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all duration-200 backdrop-blur-sm"
+                  style={{ zIndex: 20 }} // Higher z-index to appear above light
+                  title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                >
+                  {isFullscreen ? (
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                      />
+                    </svg>
+                  )}
+                </button>
 
-                    {videoEffect !== ("none" as VideoEffect) && (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <label className="font-medium text-slate-700">Level:</label>
-                          <div className="flex items-center gap-1">
-                            <Button 
-                              onClick={() => setEffectIntensity(Math.max(1, effectIntensity - 1))}
-                              variant="outline" 
-                              size="sm" 
-                              disabled={effectIntensity <= 1}
-                              className="h-6 w-6 p-0"
+                {/* Flash Effect */}
+                {showFlash && (
+                  <div className="absolute inset-0 bg-white opacity-80 pointer-events-none animate-pulse" />
+                )}
+
+                {/* Light Mode - Complete Ring Around Camera in Fullscreen */}
+                {isLightMode &&
+                  isFullscreen &&
+                  (() => {
+                    const videoArea = getVideoDisplayArea()
+                    const lightBorderWidth = 80 // Width of light ring around video
+
+                    // Validate video area calculations to prevent chaos during aspect ratio changes
+                    if (
+                      !videoArea ||
+                      videoArea.displayedVideoWidth <= 0 ||
+                      videoArea.displayedVideoHeight <= 0
+                    ) {
+                      return null // Don't render light if video dimensions are invalid
+                    }
+
+                    // Special handling for specific aspect ratios
+                    const isVertical = aspectRatio === "9:16"
+                    const isSquare = aspectRatio === "1:1"
+                    const screenWidth = window.innerWidth
+                    const screenHeight = window.innerHeight
+
+                    // For vertical and square videos, ensure proper centering calculations
+                    let adjustedVideoArea = videoArea
+                    if (isVertical || isSquare) {
+                      // Force recalculation for special aspect ratios to ensure proper centering
+                      const videoWidth = videoArea.displayedVideoWidth
+                      const videoHeight = videoArea.displayedVideoHeight
+
+                      // Center the video both horizontally and vertically
+                      const centeredOffsetX = Math.max(
+                        0,
+                        (screenWidth - videoWidth) / 2
+                      )
+                      const centeredOffsetY = Math.max(
+                        0,
+                        (screenHeight - videoHeight) / 2
+                      )
+
+                      adjustedVideoArea = {
+                        ...videoArea,
+                        videoOffsetX: centeredOffsetX,
+                        videoOffsetY: centeredOffsetY,
+                        displayedVideoWidth: videoWidth,
+                        displayedVideoHeight: Math.min(
+                          videoHeight,
+                          screenHeight
+                        ),
+                      }
+                    }
+
+                    // For 9:16 and 1:1, create full-screen light around video (no overlay on video)
+                    if (isVertical || isSquare) {
+                      return (
+                        <div
+                          key={`light-${aspectRatio}-${adjustedVideoArea.displayedVideoWidth}-${adjustedVideoArea.displayedVideoHeight}`}
+                          className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+                          style={{ zIndex: 10 }}
+                        >
+                          {/* Top area - full width */}
+                          <div
+                            className="absolute bg-white transition-all duration-300"
+                            style={{
+                              left: 0,
+                              top: 0,
+                              width: `${screenWidth}px`,
+                              height: `${Math.max(0, adjustedVideoArea.videoOffsetY)}px`,
+                              opacity: lightIntensity / 100,
+                            }}
+                          />
+
+                          {/* Bottom area - full width */}
+                          <div
+                            className="absolute bg-white transition-all duration-300"
+                            style={{
+                              left: 0,
+                              top: `${adjustedVideoArea.videoOffsetY + adjustedVideoArea.displayedVideoHeight}px`,
+                              width: `${screenWidth}px`,
+                              height: `${Math.max(0, screenHeight - (adjustedVideoArea.videoOffsetY + adjustedVideoArea.displayedVideoHeight))}px`,
+                              opacity: lightIntensity / 100,
+                            }}
+                          />
+
+                          {/* Left area - next to video */}
+                          <div
+                            className="absolute bg-white transition-all duration-300"
+                            style={{
+                              left: 0,
+                              top: `${adjustedVideoArea.videoOffsetY}px`,
+                              width: `${Math.max(0, adjustedVideoArea.videoOffsetX)}px`,
+                              height: `${adjustedVideoArea.displayedVideoHeight}px`,
+                              opacity: lightIntensity / 100,
+                            }}
+                          />
+
+                          {/* Right area - next to video */}
+                          <div
+                            className="absolute bg-white transition-all duration-300"
+                            style={{
+                              left: `${adjustedVideoArea.videoOffsetX + adjustedVideoArea.displayedVideoWidth}px`,
+                              top: `${adjustedVideoArea.videoOffsetY}px`,
+                              width: `${Math.max(0, screenWidth - (adjustedVideoArea.videoOffsetX + adjustedVideoArea.displayedVideoWidth))}px`,
+                              height: `${adjustedVideoArea.displayedVideoHeight}px`,
+                              opacity: lightIntensity / 100,
+                            }}
+                          />
+                        </div>
+                      )
+                    }
+
+                    // For other aspect ratios, use simplified full-area approach with video cutout
+                    const videoLeft = adjustedVideoArea.videoOffsetX
+                    const videoTop = adjustedVideoArea.videoOffsetY
+                    const videoWidth = adjustedVideoArea.displayedVideoWidth
+                    const videoHeight = adjustedVideoArea.displayedVideoHeight
+
+                    return (
+                      <div
+                        key={`light-${aspectRatio}-${videoWidth}-${videoHeight}`}
+                        className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+                        style={{ zIndex: 10 }} // Lower z-index so controls can overlay
+                      >
+                        {/* Top area - full width above video */}
+                        <div
+                          className="absolute bg-white transition-all duration-300"
+                          style={{
+                            left: 0,
+                            top: 0,
+                            width: `${screenWidth}px`,
+                            height: `${Math.max(0, videoTop - lightBorderWidth)}px`,
+                            opacity: lightIntensity / 100,
+                          }}
+                        />
+
+                        {/* Bottom area - full width below video */}
+                        <div
+                          className="absolute bg-white transition-all duration-300"
+                          style={{
+                            left: 0,
+                            top: `${videoTop + videoHeight + lightBorderWidth}px`,
+                            width: `${screenWidth}px`,
+                            height: `${Math.max(0, screenHeight - (videoTop + videoHeight + lightBorderWidth))}px`,
+                            opacity: lightIntensity / 100,
+                          }}
+                        />
+
+                        {/* Left area - full height beside video */}
+                        <div
+                          className="absolute bg-white transition-all duration-300"
+                          style={{
+                            left: 0,
+                            top: 0,
+                            width: `${Math.max(0, videoLeft - lightBorderWidth)}px`,
+                            height: `${screenHeight}px`,
+                            opacity: lightIntensity / 100,
+                          }}
+                        />
+
+                        {/* Right area - full height beside video */}
+                        <div
+                          className="absolute bg-white transition-all duration-300"
+                          style={{
+                            left: `${videoLeft + videoWidth + lightBorderWidth}px`,
+                            top: 0,
+                            width: `${Math.max(0, screenWidth - (videoLeft + videoWidth + lightBorderWidth))}px`,
+                            height: `${screenHeight}px`,
+                            opacity: lightIntensity / 100,
+                          }}
+                        />
+
+                        {/* Ring areas around video */}
+                        {/* Top ring */}
+                        <div
+                          className="absolute bg-white transition-all duration-300"
+                          style={{
+                            left: `${Math.max(0, videoLeft - lightBorderWidth)}px`,
+                            top: `${Math.max(0, videoTop - lightBorderWidth)}px`,
+                            width: `${videoWidth + lightBorderWidth * 2}px`,
+                            height: `${lightBorderWidth}px`,
+                            opacity: lightIntensity / 100,
+                          }}
+                        />
+
+                        {/* Bottom ring */}
+                        <div
+                          className="absolute bg-white transition-all duration-300"
+                          style={{
+                            left: `${Math.max(0, videoLeft - lightBorderWidth)}px`,
+                            top: `${videoTop + videoHeight}px`,
+                            width: `${videoWidth + lightBorderWidth * 2}px`,
+                            height: `${lightBorderWidth}px`,
+                            opacity: lightIntensity / 100,
+                          }}
+                        />
+
+                        {/* Left ring */}
+                        <div
+                          className="absolute bg-white transition-all duration-300"
+                          style={{
+                            left: `${Math.max(0, videoLeft - lightBorderWidth)}px`,
+                            top: `${videoTop}px`,
+                            width: `${lightBorderWidth}px`,
+                            height: `${videoHeight}px`,
+                            opacity: lightIntensity / 100,
+                          }}
+                        />
+
+                        {/* Right ring */}
+                        <div
+                          className="absolute bg-white transition-all duration-300"
+                          style={{
+                            left: `${videoLeft + videoWidth}px`,
+                            top: `${videoTop}px`,
+                            width: `${lightBorderWidth}px`,
+                            height: `${videoHeight}px`,
+                            opacity: lightIntensity / 100,
+                          }}
+                        />
+                      </div>
+                    )
+                  })()}
+
+                {/* Recording Overlay */}
+                {recordingState === "recording" && (
+                  <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                    REC {formatTime(recordingTime)} {isCropMode && "(Cropped)"}
+                  </div>
+                )}
+
+                {/* Processing Overlay */}
+                {recordingState === "processing" && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <div className="bg-white rounded-lg p-6 text-center space-y-4">
+                      <div className="text-lg font-semibold">
+                        {exportFormat === "mp4"
+                          ? "Converting to MP4..."
+                          : "Processing Video..."}
+                      </div>
+                      <div className="w-64 bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${processingProgress}%` }}
+                        />
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        {Math.round(processingProgress)}%
+                      </div>
+                      {exportFormat === "mp4" && (
+                        <div className="text-xs text-slate-500">
+                          {mp4RecordingSupported
+                            ? "Using native MP4 encoding"
+                            : "Converting from WebM to MP4"}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Timer Countdown Overlay */}
+                {isTimerActive && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center animate-in fade-in duration-300">
+                    <div className="relative">
+                      {/* Outer Ring with Progress */}
+                      <div className="relative w-48 h-48">
+                        {/* Background Circle */}
+                        <svg
+                          className="w-48 h-48 transform -rotate-90"
+                          viewBox="0 0 100 100"
+                        >
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="45"
+                            stroke="rgba(255,255,255,0.1)"
+                            strokeWidth="2"
+                            fill="none"
+                          />
+                          {/* Progress Circle */}
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="45"
+                            stroke="url(#timerGradient)"
+                            strokeWidth="3"
+                            fill="none"
+                            strokeLinecap="round"
+                            strokeDasharray="283"
+                            strokeDashoffset={
+                              283 -
+                              (283 * (screenshotTimer - timerCountdown)) /
+                                screenshotTimer
+                            }
+                            className="transition-all duration-1000 ease-linear"
+                          />
+                          <defs>
+                            <linearGradient
+                              id="timerGradient"
+                              x1="0%"
+                              y1="0%"
+                              x2="100%"
+                              y2="100%"
                             >
-                              -
-                            </Button>
-                            <span className="text-xs font-mono w-6 text-center">{effectIntensity}</span>
-                            <Button 
-                              onClick={() => setEffectIntensity(Math.min(10, effectIntensity + 1))}
-                              variant="outline" 
-                              size="sm" 
-                              disabled={effectIntensity >= 10}
-                              className="h-6 w-6 p-0"
-                            >
-                              +
-                            </Button>
+                              <stop offset="0%" stopColor="#3B82F6" />
+                              <stop offset="50%" stopColor="#8B5CF6" />
+                              <stop offset="100%" stopColor="#EC4899" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+
+                        {/* Inner Content */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="bg-white/95 rounded-full w-36 h-36 flex items-center justify-center shadow-2xl border border-white/20">
+                            <div className="text-center">
+                              {/* Main Number */}
+                              <div className="text-6xl font-black bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-pulse scale-110 transition-transform duration-300">
+                                {timerCountdown}
+                              </div>
+                              {/* Status Text */}
+                              <div className="text-sm font-semibold text-slate-600 mt-2 tracking-wide">
+                                Taking screenshot...
+                              </div>
+                              {/* Progress Dots */}
+                              <div className="flex justify-center gap-1 mt-3">
+                                {Array.from({ length: screenshotTimer }).map(
+                                  (_, index) => (
+                                    <div
+                                      key={index}
+                                      className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                                        index < screenshotTimer - timerCountdown
+                                          ? "bg-gradient-to-r from-blue-500 to-purple-500 scale-110"
+                                          : "bg-slate-300"
+                                      }`}
+                                    />
+                                  )
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
+                      </div>
 
-                        <div className="flex items-center gap-2">
-                          <label className="font-medium text-slate-700">Area:</label>
-                          <Button
-                            onClick={toggleEffectCropMode}
-                            variant={isEffectCropMode ? "default" : "outline"}
-                            size="sm"
-                            className={`h-6 px-2 text-xs ${isEffectCropMode ? "bg-purple-500 hover:bg-purple-600" : ""}`}
-                          >
-                            {isEffectCropMode ? "On" : "Off"}
-                          </Button>
+                      {/* Cancel Button - Floating outside */}
+                      <button
+                        onClick={cancelScreenshotTimer}
+                        className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-3 rounded-full text-sm font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 border border-red-400/50"
+                      >
+                        <svg
+                          className="w-4 h-4 mr-2 inline"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                        Cancel Timer
+                      </button>
+
+                      {/* Camera Icon */}
+                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2">
+                        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-full shadow-lg">
+                          <ImageIcon className="w-6 h-6 text-white" />
                         </div>
-                      </>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Fullscreen Controls Overlay */}
+                {isFullscreen && (
+                  <div
+                    className={`absolute bottom-6 ${
+                      aspectRatio === "9:16"
+                        ? "left-1/2 transform -translate-x-1/2 w-80" // Centered for vertical
+                        : "left-1/2 transform -translate-x-1/2" // Centered for all
+                    } flex flex-col items-center gap-4`}
+                    style={{ zIndex: 20 }} // Higher z-index to appear above light
+                  >
+                    {/* Main Controls Row */}
+                    <div className="flex items-center gap-4 bg-black/70 backdrop-blur-sm rounded-full px-6 py-3">
+                      {/* Camera Controls in Fullscreen */}
+                      {recordingState === "idle" && (
+                        <>
+                          <Button
+                            onClick={toggleCropMode}
+                            variant={isCropMode ? "default" : "outline"}
+                            size="sm"
+                            className={
+                              isCropMode
+                                ? "bg-orange-500 hover:bg-orange-600 text-white"
+                                : "bg-white/10 border-white/20 text-white hover:bg-white/20"
+                            }
+                          >
+                            <Crop className="w-4 h-4 mr-2" />
+                            {isCropMode ? "Exit Crop" : "Crop Mode"}
+                          </Button>
+                          <Button
+                            onClick={() => takeScreenshot()}
+                            variant="outline"
+                            size="sm"
+                            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                            disabled={
+                              !!cameraError ||
+                              isTimerActive ||
+                              isCapturingScreenshot
+                            }
+                          >
+                            <ImageIcon className="w-4 h-4 mr-2" />
+                            {isCapturingScreenshot
+                              ? "Capturing..."
+                              : isTimerActive
+                                ? `${timerCountdown}s`
+                                : "Screenshot"}
+                          </Button>
+                          <Button
+                            onClick={startRecording}
+                            size="sm"
+                            className="bg-red-500 hover:bg-red-600 text-white"
+                            disabled={!!cameraError}
+                          >
+                            <Camera className="w-4 h-4 mr-2" />
+                            Record
+                          </Button>
+                        </>
+                      )}
+
+                      {/* Recording Controls in Fullscreen */}
+                      {recordingState === "recording" && (
+                        <Button
+                          onClick={stopRecording}
+                          size="sm"
+                          className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          <Square className="w-4 h-4 mr-2" />
+                          Stop
+                        </Button>
+                      )}
+
+                      {/* Playback Controls in Fullscreen */}
+                      {recordingState === "stopped" && (
+                        <>
+                          <Button
+                            onClick={togglePlayback}
+                            variant="outline"
+                            size="sm"
+                            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                          >
+                            {isPlaying ? (
+                              <Pause className="w-4 h-4" />
+                            ) : (
+                              <Play className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <div className="text-white text-sm font-medium">
+                            {formatTime(currentTime)} /{" "}
+                            {formatTime(videoDuration)}
+                          </div>
+                        </>
+                      )}
+
+                      {/* Exit Fullscreen Button */}
+                      <Button
+                        onClick={toggleFullscreen}
+                        variant="outline"
+                        size="sm"
+                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      >
+                        Exit Fullscreen
+                      </Button>
+                    </div>
+
+                    {/* Settings Row - Only show when idle */}
+                    {recordingState === "idle" && (
+                      <div className="flex items-center gap-2 bg-black/70 backdrop-blur-sm rounded-full px-4 py-2">
+                        {/* Aspect Ratio Buttons */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-white text-xs font-medium mr-1">
+                            Aspect:
+                          </span>
+                          {(["16:9", "9:16", "4:3", "1:1"] as const).map(
+                            (ratio) => (
+                              <button
+                                key={ratio}
+                                onClick={() => setAspectRatio(ratio)}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                                  aspectRatio === ratio
+                                    ? "bg-blue-500 text-white"
+                                    : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                                }`}
+                              >
+                                {ratio}
+                              </button>
+                            )
+                          )}
+                        </div>
+
+                        <div className="w-px h-4 bg-white/20" />
+
+                        {/* Zoom Controls */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-white text-xs font-medium mr-1">
+                            Zoom:
+                          </span>
+                          <button
+                            onClick={zoomOut}
+                            disabled={zoomLevel <= 0.5}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                              zoomLevel <= 0.5
+                                ? "bg-white/5 text-white/30 cursor-not-allowed"
+                                : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                            }`}
+                          >
+                            <ZoomOut className="w-3 h-3" />
+                          </button>
+                          <span className="text-white text-xs font-mono w-12 text-center">
+                            {Math.round(zoomLevel * 100)}%
+                          </span>
+                          <button
+                            onClick={zoomIn}
+                            disabled={zoomLevel >= 3}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                              zoomLevel >= 3
+                                ? "bg-white/5 text-white/30 cursor-not-allowed"
+                                : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                            }`}
+                          >
+                            <ZoomIn className="w-3 h-3" />
+                          </button>
+                          {(zoomLevel !== 1 ||
+                            panOffset.x !== 0 ||
+                            panOffset.y !== 0) && (
+                            <button
+                              onClick={resetZoom}
+                              className="px-2 py-1 rounded text-xs font-medium transition-all bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                            >
+                              <ResetZoom className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="w-px h-4 bg-white/20" />
+
+                        {/* Mirror Controls */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-white text-xs font-medium mr-1">
+                            Mirror:
+                          </span>
+                          <button
+                            onClick={toggleMirror}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                              isMirrored
+                                ? "bg-green-500 text-white"
+                                : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                            }`}
+                          >
+                            {isMirrored ? "On" : "Off"}
+                          </button>
+                        </div>
+
+                        <div className="w-px h-4 bg-white/20" />
+
+                        {/* Light Mode Controls */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-white text-xs font-medium mr-1">
+                            Light:
+                          </span>
+                          <button
+                            onClick={toggleLightMode}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                              isLightMode
+                                ? "bg-yellow-500 text-white"
+                                : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                            }`}
+                          >
+                            {isLightMode ? "On" : "Off"}
+                          </button>
+                          {isLightMode && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  adjustLightIntensity(lightIntensity - 20)
+                                }
+                                disabled={lightIntensity <= 10}
+                                className={`px-1 py-1 rounded text-xs font-medium transition-all ${
+                                  lightIntensity <= 10
+                                    ? "bg-white/5 text-white/30 cursor-not-allowed"
+                                    : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                                }`}
+                              >
+                                -
+                              </button>
+                              <span className="text-white text-xs font-mono w-10 text-center">
+                                {lightIntensity}%
+                              </span>
+                              <button
+                                onClick={() =>
+                                  adjustLightIntensity(lightIntensity + 20)
+                                }
+                                disabled={lightIntensity >= 100}
+                                className={`px-1 py-1 rounded text-xs font-medium transition-all ${
+                                  lightIntensity >= 100
+                                    ? "bg-white/5 text-white/30 cursor-not-allowed"
+                                    : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                                }`}
+                              >
+                                +
+                              </button>
+                            </>
+                          )}
+                        </div>
+
+                        <div className="w-px h-4 bg-white/20" />
+
+                        {/* Effect Controls */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-white text-xs font-medium mr-1">
+                            Effect:
+                          </span>
+                          {(["none", "blur", "pixelate"] as const).map(
+                            (effect) => (
+                              <button
+                                key={effect}
+                                onClick={() => setVideoEffect(effect)}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                                  videoEffect === effect
+                                    ? "bg-purple-500 text-white"
+                                    : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                                }`}
+                              >
+                                {effect === "none"
+                                  ? "Off"
+                                  : effect === "blur"
+                                    ? "Blur"
+                                    : "Pixel"}
+                              </button>
+                            )
+                          )}
+                        </div>
+
+                        {videoEffect !== ("none" as VideoEffect) && (
+                          <>
+                            <div className="flex items-center gap-1">
+                              <span className="text-white text-xs font-medium mr-1">
+                                Level:
+                              </span>
+                              <button
+                                onClick={() =>
+                                  setEffectIntensity(
+                                    Math.max(1, effectIntensity - 1)
+                                  )
+                                }
+                                disabled={effectIntensity <= 1}
+                                className={`px-1 py-1 rounded text-xs font-medium transition-all ${
+                                  effectIntensity <= 1
+                                    ? "bg-white/5 text-white/30 cursor-not-allowed"
+                                    : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                                }`}
+                              >
+                                -
+                              </button>
+                              <span className="text-white text-xs font-mono w-6 text-center">
+                                {effectIntensity}
+                              </span>
+                              <button
+                                onClick={() =>
+                                  setEffectIntensity(
+                                    Math.min(10, effectIntensity + 1)
+                                  )
+                                }
+                                disabled={effectIntensity >= 10}
+                                className={`px-1 py-1 rounded text-xs font-medium transition-all ${
+                                  effectIntensity >= 10
+                                    ? "bg-white/5 text-white/30 cursor-not-allowed"
+                                    : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                                }`}
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              <span className="text-white text-xs font-medium mr-1">
+                                Area:
+                              </span>
+                              <button
+                                onClick={toggleEffectCropMode}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                                  isEffectCropMode
+                                    ? "bg-purple-500 text-white"
+                                    : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                                }`}
+                              >
+                                {isEffectCropMode ? "On" : "Off"}
+                              </button>
+                            </div>
+                          </>
+                        )}
+
+                        <div className="w-px h-4 bg-white/20" />
+
+                        {/* Timer Buttons */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-white text-xs font-medium mr-1">
+                            Timer:
+                          </span>
+                          {([0, 3, 5, 10] as const).map((timer) => (
+                            <button
+                              key={timer}
+                              onClick={() => setScreenshotTimer(timer)}
+                              className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                                screenshotTimer === timer
+                                  ? "bg-green-500 text-white"
+                                  : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                              }`}
+                            >
+                              {timer === 0 ? "Off" : `${timer}s`}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="w-px h-4 bg-white/20" />
+
+                        {/* Format Buttons */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-white text-xs font-medium mr-1">
+                            Format:
+                          </span>
+                          {(["png", "jpeg"] as const).map((format) => (
+                            <button
+                              key={format}
+                              onClick={() => setScreenshotFormat(format)}
+                              className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                                screenshotFormat === format
+                                  ? "bg-purple-500 text-white"
+                                  : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                              }`}
+                            >
+                              {format.toUpperCase()}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="w-px h-4 bg-white/20" />
+
+                        {/* Quality Buttons */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-white text-xs font-medium mr-1">
+                            Quality:
+                          </span>
+                          <button
+                            onClick={() => setIsHDScreenshot(!isHDScreenshot)}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                              isHDScreenshot
+                                ? "bg-purple-500 text-white"
+                                : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                            }`}
+                            title={
+                              isHDScreenshot
+                                ? "4K Quality (3840x2160 for 16:9)"
+                                : "HD Quality (1920x1080 for 16:9)"
+                            }
+                          >
+                            {isHDScreenshot ? "4K" : "HD"}
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
+
+                {/* Fullscreen Timeline */}
+                {isFullscreen &&
+                  recordingState === "stopped" &&
+                  videoDuration > 0 && (
+                    <div
+                      className={`absolute bottom-20 ${
+                        aspectRatio === "9:16"
+                          ? "left-1/2 transform -translate-x-1/2 w-80" // Centered for vertical
+                          : "left-6 right-6" // Full width for landscape/square
+                      }`}
+                      style={{ zIndex: 20 }} // Higher z-index to appear above light
+                    >
+                      <Slider
+                        value={[currentTime]}
+                        max={videoDuration || 0}
+                        step={0.1}
+                        onValueChange={([value]) => {
+                          if (isFinite(value) && videoDuration > 0) {
+                            seekTo(value)
+                          }
+                        }}
+                        className="w-full"
+                      />
+                    </div>
+                  )}
               </div>
-            )}
 
-            {/* Controls */}
-            <div className="space-y-4">
-              {/* Recording Controls */}
-              {recordingState === "recording" && (
-                <div className="flex justify-center gap-4">
-                  <Button onClick={stopRecording} size="lg" variant="destructive">
-                    <Square className="w-5 h-5 mr-2" />
-                    Stop Recording
-                  </Button>
-                </div>
-              )}
+              {/* Quick Controls Below Video Preview */}
+              {!isFullscreen && (
+                <div className="bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-2xl p-6 space-y-6 border border-white/50 shadow-sm">
+                  {/* Main Camera Controls */}
+                  {recordingState === "idle" && (
+                    <div className="flex justify-center gap-4 flex-wrap">
+                      <Button
+                        onClick={toggleCropMode}
+                        variant={isCropMode ? "default" : "outline"}
+                        size="sm"
+                        className={
+                          isCropMode
+                            ? "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg"
+                            : "bg-white/80 hover:bg-white border-orange-300 text-orange-700 hover:text-orange-800 transition-all duration-300"
+                        }
+                      >
+                        <Crop className="w-4 h-4 mr-2" />
+                        {isCropMode ? "Exit Crop" : "Crop"}
+                      </Button>
 
-              {/* Zoom Info */}
-              {recordingState === "idle" && zoomLevel !== 1 && (
-                <div className="text-center text-sm text-slate-600 bg-purple-50 rounded-lg p-3">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <ZoomIn className="w-4 h-4" />
-                    <span className="font-medium">Zoom Active: {Math.round(zoomLevel * 100)}%</span>
-                  </div>
-                  <p>Use mouse to pan when zoomed • Keyboard: +/- to zoom, 0 to reset</p>
-                  {(panOffset.x !== 0 || panOffset.y !== 0) && (
-                    <p className="text-xs text-slate-500 mt-1">
-                      Pan offset: {Math.round(panOffset.x)}px, {Math.round(panOffset.y)}px
-                    </p>
+                      <Button
+                        onClick={() => takeScreenshot()}
+                        variant="outline"
+                        size="sm"
+                        className="bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-300 text-blue-700 hover:text-blue-800 transition-all duration-300 shadow-sm"
+                        disabled={
+                          !!cameraError ||
+                          isTimerActive ||
+                          isCapturingScreenshot
+                        }
+                      >
+                        <ImageIcon className="w-4 h-4 mr-2" />
+                        {isCapturingScreenshot
+                          ? "Capturing..."
+                          : isTimerActive
+                            ? `${timerCountdown}s`
+                            : "Screenshot"}
+                      </Button>
+
+                      <Button
+                        onClick={startRecording}
+                        size="sm"
+                        className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg transition-all duration-300 hover:shadow-xl"
+                        disabled={!!cameraError}
+                      >
+                        <Camera className="w-4 h-4 mr-2" />
+                        Record
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Quick Settings Row */}
+                  {recordingState === "idle" && (
+                    <div className="flex items-center justify-center gap-6 flex-wrap text-sm">
+                      {/* Recording Mode */}
+                      <div className="flex items-center gap-2">
+                        <label className="font-medium text-slate-700">
+                          Mode:
+                        </label>
+                        <Select
+                          value={recordingMode}
+                          onValueChange={(value: RecordingMode) => {
+                            if (value === "webcam") switchToWebcam()
+                            else if (value === "screen") switchToScreen()
+                            else if (value === "pip") switchToPip()
+                          }}
+                        >
+                          <SelectTrigger className="w-28 h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="webcam">Webcam</SelectItem>
+                            <SelectItem value="screen">Screen</SelectItem>
+                            <SelectItem value="pip">PIP</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Aspect Ratio */}
+                      <div className="flex items-center gap-2">
+                        <label className="font-medium text-slate-700">
+                          Aspect:
+                        </label>
+                        <Select
+                          value={aspectRatio}
+                          onValueChange={(value: AspectRatio) =>
+                            setAspectRatio(value)
+                          }
+                        >
+                          <SelectTrigger className="w-24 h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="16:9">16:9</SelectItem>
+                            <SelectItem value="9:16">9:16</SelectItem>
+                            <SelectItem value="4:3">4:3</SelectItem>
+                            <SelectItem value="1:1">1:1</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Zoom Controls */}
+                      <div className="flex items-center gap-2">
+                        <label className="font-medium text-slate-700">
+                          Zoom:
+                        </label>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            onClick={zoomOut}
+                            variant="outline"
+                            size="sm"
+                            disabled={zoomLevel <= 0.5}
+                            className="h-6 w-6 p-0"
+                          >
+                            <ZoomOut className="w-3 h-3" />
+                          </Button>
+                          <span className="text-xs font-mono w-12 text-center">
+                            {Math.round(zoomLevel * 100)}%
+                          </span>
+                          <Button
+                            onClick={zoomIn}
+                            variant="outline"
+                            size="sm"
+                            disabled={zoomLevel >= 3}
+                            className="h-6 w-6 p-0"
+                          >
+                            <ZoomIn className="w-3 h-3" />
+                          </Button>
+                          {(zoomLevel !== 1 ||
+                            panOffset.x !== 0 ||
+                            panOffset.y !== 0) && (
+                            <Button
+                              onClick={resetZoom}
+                              variant="outline"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                            >
+                              <ResetZoom className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Mirror Toggle */}
+                      <div className="flex items-center gap-2">
+                        <label className="font-medium text-slate-700">
+                          Mirror:
+                        </label>
+                        <Button
+                          onClick={toggleMirror}
+                          variant={isMirrored ? "default" : "outline"}
+                          size="sm"
+                          className={`h-6 px-2 text-xs ${isMirrored ? "bg-green-500 hover:bg-green-600" : ""}`}
+                        >
+                          {isMirrored ? "On" : "Off"}
+                        </Button>
+                      </div>
+
+                      {/* Timer */}
+                      <div className="flex items-center gap-2">
+                        <label className="font-medium text-slate-700">
+                          Timer:
+                        </label>
+                        <Select
+                          value={screenshotTimer.toString()}
+                          onValueChange={(value) =>
+                            setScreenshotTimer(Number.parseInt(value))
+                          }
+                        >
+                          <SelectTrigger className="w-16 h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">Off</SelectItem>
+                            <SelectItem value="3">3s</SelectItem>
+                            <SelectItem value="5">5s</SelectItem>
+                            <SelectItem value="10">10s</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Format */}
+                      <div className="flex items-center gap-2">
+                        <label className="font-medium text-slate-700">
+                          Format:
+                        </label>
+                        <Select
+                          value={screenshotFormat}
+                          onValueChange={(value: ScreenshotFormat) =>
+                            setScreenshotFormat(value)
+                          }
+                        >
+                          <SelectTrigger className="w-20 h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="png">PNG</SelectItem>
+                            <SelectItem value="jpeg">JPEG</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* HD Quality */}
+                      <div className="flex items-center gap-2">
+                        <label className="font-medium text-slate-700">
+                          Quality:
+                        </label>
+                        <Button
+                          onClick={() => setIsHDScreenshot(!isHDScreenshot)}
+                          variant={isHDScreenshot ? "default" : "outline"}
+                          size="sm"
+                          className={`h-6 px-2 text-xs ${isHDScreenshot ? "bg-purple-500 hover:bg-purple-600" : ""}`}
+                          title={
+                            isHDScreenshot
+                              ? "4K Quality (3840x2160 for 16:9)"
+                              : "HD Quality (1920x1080 for 16:9)"
+                          }
+                        >
+                          {isHDScreenshot ? "4K" : "HD"}
+                        </Button>
+                      </div>
+
+                      {/* Light Mode - Fullscreen Only */}
+                      <div className="flex items-center gap-2">
+                        <label className="font-medium text-slate-500">
+                          Light:
+                        </label>
+                        <Button
+                          onClick={() => {}} // Disabled - light mode only works in fullscreen
+                          variant="outline"
+                          size="sm"
+                          disabled={true}
+                          className="h-6 px-2 text-xs bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
+                          title="Light Mode (Fullscreen Only)"
+                        >
+                          Fullscreen Only
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Effects Row */}
+                  {recordingState === "idle" && (
+                    <div className="flex items-center justify-center gap-4 flex-wrap text-sm border-t pt-3">
+                      <div className="flex items-center gap-2">
+                        <label className="font-medium text-slate-700">
+                          Effect:
+                        </label>
+                        <Select
+                          value={videoEffect}
+                          onValueChange={(value: VideoEffect) =>
+                            setVideoEffect(value)
+                          }
+                        >
+                          <SelectTrigger className="w-24 h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            <SelectItem value="blur">Blur</SelectItem>
+                            <SelectItem value="pixelate">Pixelate</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {videoEffect !== ("none" as VideoEffect) && (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <label className="font-medium text-slate-700">
+                              Level:
+                            </label>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                onClick={() =>
+                                  setEffectIntensity(
+                                    Math.max(1, effectIntensity - 1)
+                                  )
+                                }
+                                variant="outline"
+                                size="sm"
+                                disabled={effectIntensity <= 1}
+                                className="h-6 w-6 p-0"
+                              >
+                                -
+                              </Button>
+                              <span className="text-xs font-mono w-6 text-center">
+                                {effectIntensity}
+                              </span>
+                              <Button
+                                onClick={() =>
+                                  setEffectIntensity(
+                                    Math.min(10, effectIntensity + 1)
+                                  )
+                                }
+                                variant="outline"
+                                size="sm"
+                                disabled={effectIntensity >= 10}
+                                className="h-6 w-6 p-0"
+                              >
+                                +
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <label className="font-medium text-slate-700">
+                              Area:
+                            </label>
+                            <Button
+                              onClick={toggleEffectCropMode}
+                              variant={isEffectCropMode ? "default" : "outline"}
+                              size="sm"
+                              className={`h-6 px-2 text-xs ${isEffectCropMode ? "bg-purple-500 hover:bg-purple-600" : ""}`}
+                            >
+                              {isEffectCropMode ? "On" : "Off"}
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
 
-              {/* Mirror Info */}
-              {recordingState === "idle" && isMirrored && (
-                <div className="text-center text-sm text-slate-600 bg-green-50 rounded-lg p-3">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                      />
-                    </svg>
-                    <span className="font-medium">Mirror Mode Active</span>
-                  </div>
-                  <p>Video is horizontally flipped • Perfect for selfie-style recording</p>
-                </div>
-              )}
-
-              {/* Light Mode Info */}
-              {recordingState === "idle" && isLightMode && isFullscreen && (
-                <div className="text-center text-sm text-slate-600 bg-yellow-50 rounded-lg p-3">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                    <span className="font-medium">Light Mode Active ({lightIntensity}%)</span>
-                  </div>
-                  <p>
-                    Professional illumination in fullscreen mode: Ring light for 16:9/4:3 videos, full-screen light for 9:16 vertical and 1:1 square videos • 
-                    Controls overlay on top of light as needed • Adjust intensity with +/- controls
-                  </p>
-                </div>
-              )}
-
-              {/* Light Mode Disabled Info */}
-              {recordingState === "idle" && !isFullscreen && (
-                <div className="text-center text-sm text-slate-600 bg-blue-50 rounded-lg p-3">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="font-medium">Light Mode Available in Fullscreen</span>
-                  </div>
-                  <p>
-                    Press F to enter fullscreen mode and access professional light: Ring light for 16:9/4:3 videos, full-screen illumination for 9:16 vertical and 1:1 square • 
-                    Use L key or controls to toggle light mode once in fullscreen • Controls will overlay on light when needed
-                  </p>
-                </div>
-              )}
-
-              {/* Effect Info */}
-              {recordingState === "idle" && videoEffect !== ("none" as VideoEffect) && (
-                <div className="text-center text-sm text-slate-600 bg-purple-50 rounded-lg p-3">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 10V3L4 14h7v7l9-11h-7z"
-                      />
-                    </svg>
-                    <span className="font-medium">
-                      {videoEffect === "blur" ? "Blur Effect" : "Pixelate Effect"} Active (Intensity: {effectIntensity})
-                      {isEffectCropMode && " - Area Mode"}
-                    </span>
-                  </div>
-                  <p>
-                    {videoEffect === "blur"
-                      ? "Video is blurred for privacy or artistic effect"
-                      : "Video is pixelated with retro-style blocks"}
-                    {isEffectCropMode && " - Effect applied only to selected area"}
-                  </p>
-                </div>
-              )}
-
-              {/* Crop Mode Info */}
-              {recordingState === "idle" && isCropMode && (
-                <div className="text-center text-sm text-slate-600 bg-orange-50 rounded-lg p-3">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Move className="w-4 h-4" />
-                    <span className="font-medium">Crop Mode Active</span>
-                  </div>
-                  <p>Drag the orange rectangle to move • Drag corners to resize</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Area: {Math.round(cropArea.width * 100)}% × {Math.round(cropArea.height * 100)}% • Position:{" "}
-                    {Math.round(cropArea.x * 100)}%, {Math.round(cropArea.y * 100)}%
-                  </p>
-                </div>
-              )}
-
-              {/* PIP Mode Info */}
-              {recordingState === "idle" && recordingMode === "pip" && screenStream && (
-                <div className="text-center text-sm text-slate-600 bg-purple-50 rounded-lg p-3">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    <Camera className="w-4 h-4" />
-                    <span className="font-medium">Picture-in-Picture Active</span>
-                  </div>
-                  <p>Screen capture with webcam overlay • Drag webcam to reposition • Drag corner to resize</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Webcam Center: {Math.round(pipPosition.x)}%, {Math.round(pipPosition.y)}% • Size: {Math.round(pipPosition.width)}% × {Math.round(pipPosition.height)}%
-                  </p>
-                </div>
-              )}
-
-              {/* Screen Recording Mode Info */}
-              {recordingState === "idle" && recordingMode === "screen" && screenStream && (
-                <div className="text-center text-sm text-slate-600 bg-green-50 rounded-lg p-3">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    <span className="font-medium">Screen Recording Mode</span>
-                  </div>
-                  <p>Recording your screen with audio • Perfect for tutorials and presentations</p>
-                </div>
-              )}
-
-              {/* Webcam Mode Info */}
-              {recordingState === "idle" && recordingMode === "webcam" && (
-                <div className="text-center text-sm text-slate-600 bg-blue-50 rounded-lg p-3">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Camera className="w-4 h-4" />
-                    <span className="font-medium">Webcam Recording Mode</span>
-                  </div>
-                  <p>Traditional camera recording with all effects and features available</p>
-                </div>
-              )}
-
-              {/* Recording Controls */}
-              {recordingState === "recording" && (
-                <div className="flex justify-center gap-4">
-                  <Button onClick={stopRecording} size="lg" variant="destructive">
-                    <Square className="w-5 h-5 mr-2" />
-                    Stop Recording
-                  </Button>
-                </div>
-              )}
-
-              {/* Playback Controls */}
-              {recordingState === "stopped" && (
-                <div className="space-y-6">
-                  <div className="flex justify-center gap-4 flex-wrap">
-                    <Button 
-                      onClick={togglePlayback} 
-                      variant="outline"
-                      className="bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-300 text-blue-700 hover:text-blue-800 transition-all duration-300 shadow-sm"
-                    >
-                      {isPlaying ? <Pause className="w-5 h-5 mr-2" /> : <Play className="w-5 h-5 mr-2" />}
-                      {isPlaying ? "Pause" : "Play"}
-                    </Button>
-
-                    <Button 
-                      onClick={() => setRecordingState("editing")} 
-                      variant="outline"
-                      className="bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 border-orange-300 text-orange-700 hover:text-orange-800 transition-all duration-300 shadow-sm"
-                    >
-                      <Scissors className="w-5 h-5 mr-2" />
-                      Edit Video
-                    </Button>
-
+              {/* Controls */}
+              <div className="space-y-4">
+                {/* Recording Controls */}
+                {recordingState === "recording" && (
+                  <div className="flex justify-center gap-4">
                     <Button
-                      onClick={downloadOriginalVideo}
-                      variant="outline"
-                      className="bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 border-emerald-300 text-emerald-700 hover:text-emerald-800 transition-all duration-300 shadow-sm"
+                      onClick={stopRecording}
+                      size="lg"
+                      variant="destructive"
                     >
-                      <Download className="w-5 h-5 mr-2" />
-                      Download {exportFormat.toUpperCase()}
-                    </Button>
-
-                    <Button 
-                      onClick={() => resetRecording(false)} 
-                      variant="outline"
-                      className="bg-gradient-to-r from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 border-gray-300 text-gray-700 hover:text-gray-800 transition-all duration-300 shadow-sm"
-                    >
-                      <RotateCcw className="w-5 h-5 mr-2" />
-                      New Recording
+                      <Square className="w-5 h-5 mr-2" />
+                      Stop Recording
                     </Button>
                   </div>
+                )}
 
-                  {/* Enhanced Timeline with Thumbnails */}
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm text-slate-600">
-                      <span>{formatTime(currentTime)}</span>
-                      <span>{formatTime(videoDuration)}</span>
+                {/* Zoom Info */}
+                {recordingState === "idle" && zoomLevel !== 1 && (
+                  <div className="text-center text-sm text-slate-600 bg-purple-50 rounded-lg p-3">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <ZoomIn className="w-4 h-4" />
+                      <span className="font-medium">
+                        Zoom Active: {Math.round(zoomLevel * 100)}%
+                      </span>
+                    </div>
+                    <p>
+                      Use mouse to pan when zoomed • Keyboard: +/- to zoom, 0 to
+                      reset
+                    </p>
+                    {(panOffset.x !== 0 || panOffset.y !== 0) && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Pan offset: {Math.round(panOffset.x)}px,{" "}
+                        {Math.round(panOffset.y)}px
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Mirror Info */}
+                {recordingState === "idle" && isMirrored && (
+                  <div className="text-center text-sm text-slate-600 bg-green-50 rounded-lg p-3">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                        />
+                      </svg>
+                      <span className="font-medium">Mirror Mode Active</span>
+                    </div>
+                    <p>
+                      Video is horizontally flipped • Perfect for selfie-style
+                      recording
+                    </p>
+                  </div>
+                )}
+
+                {/* Light Mode Info */}
+                {recordingState === "idle" && isLightMode && isFullscreen && (
+                  <div className="text-center text-sm text-slate-600 bg-yellow-50 rounded-lg p-3">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                        />
+                      </svg>
+                      <span className="font-medium">
+                        Light Mode Active ({lightIntensity}%)
+                      </span>
+                    </div>
+                    <p>
+                      Professional illumination in fullscreen mode: Ring light
+                      for 16:9/4:3 videos, full-screen light for 9:16 vertical
+                      and 1:1 square videos • Controls overlay on top of light
+                      as needed • Adjust intensity with +/- controls
+                    </p>
+                  </div>
+                )}
+
+                {/* Light Mode Disabled Info */}
+                {recordingState === "idle" && !isFullscreen && (
+                  <div className="text-center text-sm text-slate-600 bg-blue-50 rounded-lg p-3">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span className="font-medium">
+                        Light Mode Available in Fullscreen
+                      </span>
+                    </div>
+                    <p>
+                      Press F to enter fullscreen mode and access professional
+                      light: Ring light for 16:9/4:3 videos, full-screen
+                      illumination for 9:16 vertical and 1:1 square • Use L key
+                      or controls to toggle light mode once in fullscreen •
+                      Controls will overlay on light when needed
+                    </p>
+                  </div>
+                )}
+
+                {/* Effect Info */}
+                {recordingState === "idle" &&
+                  videoEffect !== ("none" as VideoEffect) && (
+                    <div className="text-center text-sm text-slate-600 bg-purple-50 rounded-lg p-3">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 10V3L4 14h7v7l9-11h-7z"
+                          />
+                        </svg>
+                        <span className="font-medium">
+                          {videoEffect === "blur"
+                            ? "Blur Effect"
+                            : "Pixelate Effect"}{" "}
+                          Active (Intensity: {effectIntensity})
+                          {isEffectCropMode && " - Area Mode"}
+                        </span>
+                      </div>
+                      <p>
+                        {videoEffect === "blur"
+                          ? "Video is blurred for privacy or artistic effect"
+                          : "Video is pixelated with retro-style blocks"}
+                        {isEffectCropMode &&
+                          " - Effect applied only to selected area"}
+                      </p>
+                    </div>
+                  )}
+
+                {/* Crop Mode Info */}
+                {recordingState === "idle" && isCropMode && (
+                  <div className="text-center text-sm text-slate-600 bg-orange-50 rounded-lg p-3">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <Move className="w-4 h-4" />
+                      <span className="font-medium">Crop Mode Active</span>
+                    </div>
+                    <p>
+                      Drag the orange rectangle to move • Drag corners to resize
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Area: {Math.round(cropArea.width * 100)}% ×{" "}
+                      {Math.round(cropArea.height * 100)}% • Position:{" "}
+                      {Math.round(cropArea.x * 100)}%,{" "}
+                      {Math.round(cropArea.y * 100)}%
+                    </p>
+                  </div>
+                )}
+
+                {/* PIP Mode Info */}
+                {recordingState === "idle" &&
+                  recordingMode === "pip" &&
+                  screenStream && (
+                    <div className="text-center text-sm text-slate-600 bg-purple-50 rounded-lg p-3">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                          />
+                        </svg>
+                        <Camera className="w-4 h-4" />
+                        <span className="font-medium">
+                          Picture-in-Picture Active
+                        </span>
+                      </div>
+                      <p>
+                        Screen capture with webcam overlay • Drag webcam to
+                        reposition • Drag corner to resize
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Webcam Center: {Math.round(pipPosition.x)}%,{" "}
+                        {Math.round(pipPosition.y)}% • Size:{" "}
+                        {Math.round(pipPosition.width)}% ×{" "}
+                        {Math.round(pipPosition.height)}%
+                      </p>
+                    </div>
+                  )}
+
+                {/* Screen Recording Mode Info */}
+                {recordingState === "idle" &&
+                  recordingMode === "screen" &&
+                  screenStream && (
+                    <div className="text-center text-sm text-slate-600 bg-green-50 rounded-lg p-3">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                          />
+                        </svg>
+                        <span className="font-medium">
+                          Screen Recording Mode
+                        </span>
+                      </div>
+                      <p>
+                        Recording your screen with audio • Perfect for tutorials
+                        and presentations
+                      </p>
+                    </div>
+                  )}
+
+                {/* Webcam Mode Info */}
+                {recordingState === "idle" && recordingMode === "webcam" && (
+                  <div className="text-center text-sm text-slate-600 bg-blue-50 rounded-lg p-3">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <Camera className="w-4 h-4" />
+                      <span className="font-medium">Webcam Recording Mode</span>
+                    </div>
+                    <p>
+                      Traditional camera recording with all effects and features
+                      available
+                    </p>
+                  </div>
+                )}
+
+                {/* Recording Controls */}
+                {recordingState === "recording" && (
+                  <div className="flex justify-center gap-4">
+                    <Button
+                      onClick={stopRecording}
+                      size="lg"
+                      variant="destructive"
+                    >
+                      <Square className="w-5 h-5 mr-2" />
+                      Stop Recording
+                    </Button>
+                  </div>
+                )}
+
+                {/* Playback Controls */}
+                {recordingState === "stopped" && (
+                  <div className="space-y-6">
+                    <div className="flex justify-center gap-4 flex-wrap">
+                      <Button
+                        onClick={togglePlayback}
+                        variant="outline"
+                        className="bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-300 text-blue-700 hover:text-blue-800 transition-all duration-300 shadow-sm"
+                      >
+                        {isPlaying ? (
+                          <Pause className="w-5 h-5 mr-2" />
+                        ) : (
+                          <Play className="w-5 h-5 mr-2" />
+                        )}
+                        {isPlaying ? "Pause" : "Play"}
+                      </Button>
+
+                      <Button
+                        onClick={() => setRecordingState("editing")}
+                        variant="outline"
+                        className="bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 border-orange-300 text-orange-700 hover:text-orange-800 transition-all duration-300 shadow-sm"
+                      >
+                        <Scissors className="w-5 h-5 mr-2" />
+                        Edit Video
+                      </Button>
+
+                      <Button
+                        onClick={downloadOriginalVideo}
+                        variant="outline"
+                        className="bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 border-emerald-300 text-emerald-700 hover:text-emerald-800 transition-all duration-300 shadow-sm"
+                      >
+                        <Download className="w-5 h-5 mr-2" />
+                        Download {exportFormat.toUpperCase()}
+                      </Button>
+
+                      <Button
+                        onClick={() => resetRecording(false)}
+                        variant="outline"
+                        className="bg-gradient-to-r from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 border-gray-300 text-gray-700 hover:text-gray-800 transition-all duration-300 shadow-sm"
+                      >
+                        <RotateCcw className="w-5 h-5 mr-2" />
+                        New Recording
+                      </Button>
                     </div>
 
-                    {/* Thumbnail Timeline */}
-                    {thumbnails.length > 0 && (
-                      <div className="relative">
-                        {/* Thumbnails */}
-                        <div className="flex justify-between items-end mb-2 px-2">
-                          {thumbnails.map((thumbnail, index) => (
-                            <div
-                              key={index}
-                              className="relative cursor-pointer group"
-                              onClick={() => seekTo(thumbnail.time)}
-                            >
-                              <img
-                                src={thumbnail.url || "/placeholder.svg"}
-                                alt={`Thumbnail at ${formatTime(thumbnail.time)}`}
-                                className="w-12 h-7 object-cover rounded border-2 border-transparent group-hover:border-blue-400 transition-all duration-200 shadow-sm"
-                              />
-                              <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 text-xs text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {formatTime(thumbnail.time)}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Current time indicator */}
-                        <div
-                          className="absolute top-0 w-0.5 h-7 bg-red-500 rounded-full pointer-events-none transition-all duration-100"
-                          style={{
-                            left: `${(currentTime / videoDuration) * 100}%`,
-                            transform: "translateX(-50%)",
-                          }}
-                        />
+                    {/* Enhanced Timeline with Thumbnails */}
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm text-slate-600">
+                        <span>{formatTime(currentTime)}</span>
+                        <span>{formatTime(videoDuration)}</span>
                       </div>
-                    )}
 
-                    {/* Loading indicator for thumbnails */}
-                    {isGeneratingThumbnails && (
-                      <div className="flex items-center justify-center py-4 text-sm text-slate-600">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                        Generating timeline previews...
-                      </div>
-                    )}
-
-                    <Slider
-                      value={[currentTime]}
-                      max={videoDuration || 0}
-                      step={0.1}
-                      onValueChange={([value]) => {
-                        if (isFinite(value) && videoDuration > 0) {
-                          seekTo(value)
-                        }
-                      }}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Editing Controls */}
-              {recordingState === "editing" && (
-                <div className="space-y-4">
-                  <div className="text-center">
-                    <h3 className="text-lg font-semibold mb-2">Trim Video</h3>
-                    <p className="text-sm text-slate-600">Set the start and end points for your video</p>
-                  </div>
-
-                  {/* Enhanced Trim Timeline */}
-                  <div className="space-y-4">
-                    {/* Thumbnail Timeline for Editing */}
-                    {thumbnails.length > 0 && (
-                      <div className="relative bg-slate-50 rounded-lg p-4">
-                        <div className="text-sm font-medium mb-3 text-slate-700">Timeline Preview</div>
+                      {/* Thumbnail Timeline */}
+                      {thumbnails.length > 0 && (
                         <div className="relative">
                           {/* Thumbnails */}
-                          <div className="flex justify-between items-end mb-3">
+                          <div className="flex justify-between items-end mb-2 px-2">
                             {thumbnails.map((thumbnail, index) => (
                               <div
                                 key={index}
@@ -5017,11 +5990,7 @@ export default function CameraRecorder() {
                                 <img
                                   src={thumbnail.url || "/placeholder.svg"}
                                   alt={`Thumbnail at ${formatTime(thumbnail.time)}`}
-                                  className={`w-12 h-7 object-cover rounded border-2 transition-all duration-200 shadow-sm ${
-                                    thumbnail.time >= trimStart && thumbnail.time <= trimEnd
-                                      ? "border-green-400 opacity-100"
-                                      : "border-slate-300 opacity-50"
-                                  }`}
+                                  className="w-12 h-7 object-cover rounded border-2 border-transparent group-hover:border-blue-400 transition-all duration-200 shadow-sm"
                                 />
                                 <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 text-xs text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                   {formatTime(thumbnail.time)}
@@ -5029,15 +5998,6 @@ export default function CameraRecorder() {
                               </div>
                             ))}
                           </div>
-
-                          {/* Trim range indicator */}
-                          <div
-                            className="absolute top-0 h-7 bg-green-200 bg-opacity-50 border-l-2 border-r-2 border-green-500 pointer-events-none"
-                            style={{
-                              left: `${(trimStart / videoDuration) * 100}%`,
-                              width: `${((trimEnd - trimStart) / videoDuration) * 100}%`,
-                            }}
-                          />
 
                           {/* Current time indicator */}
                           <div
@@ -5048,498 +6008,777 @@ export default function CameraRecorder() {
                             }}
                           />
                         </div>
+                      )}
+
+                      {/* Loading indicator for thumbnails */}
+                      {isGeneratingThumbnails && (
+                        <div className="flex items-center justify-center py-4 text-sm text-slate-600">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                          Generating timeline previews...
+                        </div>
+                      )}
+
+                      <Slider
+                        value={[currentTime]}
+                        max={videoDuration || 0}
+                        step={0.1}
+                        onValueChange={([value]) => {
+                          if (isFinite(value) && videoDuration > 0) {
+                            seekTo(value)
+                          }
+                        }}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Editing Controls */}
+                {recordingState === "editing" && (
+                  <div className="space-y-4">
+                    <div className="text-center">
+                      <h3 className="text-lg font-semibold mb-2">Trim Video</h3>
+                      <p className="text-sm text-slate-600">
+                        Set the start and end points for your video
+                      </p>
+                    </div>
+
+                    {/* Enhanced Trim Timeline */}
+                    <div className="space-y-4">
+                      {/* Thumbnail Timeline for Editing */}
+                      {thumbnails.length > 0 && (
+                        <div className="relative bg-slate-50 rounded-lg p-4">
+                          <div className="text-sm font-medium mb-3 text-slate-700">
+                            Timeline Preview
+                          </div>
+                          <div className="relative">
+                            {/* Thumbnails */}
+                            <div className="flex justify-between items-end mb-3">
+                              {thumbnails.map((thumbnail, index) => (
+                                <div
+                                  key={index}
+                                  className="relative cursor-pointer group"
+                                  onClick={() => seekTo(thumbnail.time)}
+                                >
+                                  <img
+                                    src={thumbnail.url || "/placeholder.svg"}
+                                    alt={`Thumbnail at ${formatTime(thumbnail.time)}`}
+                                    className={`w-12 h-7 object-cover rounded border-2 transition-all duration-200 shadow-sm ${
+                                      thumbnail.time >= trimStart &&
+                                      thumbnail.time <= trimEnd
+                                        ? "border-green-400 opacity-100"
+                                        : "border-slate-300 opacity-50"
+                                    }`}
+                                  />
+                                  <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 text-xs text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {formatTime(thumbnail.time)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Trim range indicator */}
+                            <div
+                              className="absolute top-0 h-7 bg-green-200 bg-opacity-50 border-l-2 border-r-2 border-green-500 pointer-events-none"
+                              style={{
+                                left: `${(trimStart / videoDuration) * 100}%`,
+                                width: `${((trimEnd - trimStart) / videoDuration) * 100}%`,
+                              }}
+                            />
+
+                            {/* Current time indicator */}
+                            <div
+                              className="absolute top-0 w-0.5 h-7 bg-red-500 rounded-full pointer-events-none transition-all duration-100"
+                              style={{
+                                left: `${(currentTime / videoDuration) * 100}%`,
+                                transform: "translateX(-50%)",
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Start Time: {formatTime(trimStart)}
+                        </label>
+                        <Slider
+                          value={[trimStart]}
+                          max={videoDuration || 0}
+                          step={0.1}
+                          onValueChange={([value]) => {
+                            if (isFinite(value) && videoDuration > 0) {
+                              const clampedValue = Math.max(
+                                0,
+                                Math.min(value, trimEnd)
+                              )
+                              setTrimStart(clampedValue)
+                              seekTo(clampedValue)
+                            }
+                          }}
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          End Time: {formatTime(trimEnd)}
+                        </label>
+                        <Slider
+                          value={[trimEnd]}
+                          max={videoDuration || 0}
+                          step={0.1}
+                          onValueChange={([value]) => {
+                            if (isFinite(value) && videoDuration > 0) {
+                              const clampedValue = Math.max(
+                                trimStart,
+                                Math.min(value, videoDuration)
+                              )
+                              setTrimEnd(clampedValue)
+                              seekTo(clampedValue)
+                            }
+                          }}
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div className="bg-slate-50 rounded-lg p-4">
+                        <div className="text-sm text-slate-600">
+                          <strong>Trimmed Duration:</strong>{" "}
+                          {formatTime(trimEnd - trimStart)}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          Export format: {exportFormat.toUpperCase()}
+                          {exportFormat === "mp4" &&
+                            mp4RecordingSupported &&
+                            " (Native)"}
+                          {exportFormat === "mp4" &&
+                            !mp4RecordingSupported &&
+                            " (Converted)"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-center gap-4 flex-wrap">
+                      <Button
+                        onClick={() => setRecordingState("stopped")}
+                        variant="outline"
+                      >
+                        Cancel
+                      </Button>
+
+                      <Button
+                        onClick={downloadOriginalVideo}
+                        variant="outline"
+                        className="bg-blue-50 hover:bg-blue-100"
+                      >
+                        <Download className="w-5 h-5 mr-2" />
+                        Download Original
+                      </Button>
+
+                      <Button
+                        onClick={downloadTrimmedVideo}
+                        className="bg-green-600 hover:bg-green-700"
+                        disabled={trimEnd - trimStart < 0.5}
+                      >
+                        <Download className="w-5 h-5 mr-2" />
+                        Download Trimmed {exportFormat.toUpperCase()}
+                      </Button>
+                    </div>
+
+                    {trimEnd - trimStart < 0.5 && (
+                      <div className="text-center text-sm text-amber-600 bg-amber-50 rounded-lg p-2">
+                        ⚠️ Trimmed video must be at least 0.5 seconds long
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Screenshot Gallery */}
+          {screenshots.length > 0 && (
+            <Card className="bg-white/70 backdrop-blur-sm border border-white/50 shadow-xl rounded-2xl overflow-hidden">
+              <CardHeader className="pb-4 bg-gradient-to-r from-blue-50/80 to-purple-50/80 border-b border-white/50">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl shadow-lg">
+                      <ImageIcon className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                      Recent Screenshots ({screenshotCount})
+                    </span>
+                  </CardTitle>
+                  <div className="flex items-center gap-3">
+                    {screenshots.length > 1 && (
+                      <Button
+                        onClick={downloadAllScreenshots}
+                        variant="outline"
+                        size="sm"
+                        disabled={isDownloadingAll}
+                        className={`shadow-sm transition-all duration-300 ${
+                          isDownloadingAll
+                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 text-blue-700 cursor-not-allowed"
+                            : "bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 text-emerald-700 border-emerald-300 hover:shadow-md"
+                        }`}
+                      >
+                        {isDownloadingAll ? (
+                          <>
+                            <div className="w-4 h-4 mr-2 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                            {downloadProgress < 60
+                              ? `Preparing... ${downloadProgress}%`
+                              : downloadProgress < 95
+                                ? `Creating ZIP... ${downloadProgress}%`
+                                : `Downloading... ${downloadProgress}%`}
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4 mr-2" />
+                            Download All ({screenshots.length}) ZIP
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    <Button
+                      onClick={clearScreenshots}
+                      variant="outline"
+                      size="sm"
+                      className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all duration-300"
+                    >
+                      Clear All
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                {/* Grid Layout for Better Viewing */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 gap-4 max-h-96 overflow-y-auto">
+                  {screenshots.map((screenshot, index) => (
+                    <div key={screenshot.id} className="group">
+                      <div className="relative">
+                        <img
+                          src={screenshot.url || "/placeholder.svg"}
+                          alt={`Screenshot ${index + 1}`}
+                          className="w-full aspect-[3/4] object-cover bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-transparent group-hover:border-blue-400 transition-all duration-300 cursor-pointer shadow-sm group-hover:shadow-lg"
+                          onClick={() => openScreenshotModal(index)}
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-lg flex items-center justify-center">
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openScreenshotModal(index)
+                              }}
+                              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-1.5 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+                              title="View"
+                            >
+                              <svg
+                                className="w-3 h-3"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                downloadScreenshot(screenshot)
+                              }}
+                              className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white p-1.5 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+                              title="Download"
+                            >
+                              <Download className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                        {/* Screenshot Number Badge */}
+                        <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
+                          {index + 1}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1 text-center font-medium truncate">
+                        {screenshot.timestamp.toLocaleTimeString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Show total count and scroll hint if many screenshots */}
+                {screenshots.length > 12 && (
+                  <div className="mt-4 text-center text-sm text-gray-600 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200">
+                    📸 Showing all {screenshots.length} screenshots • Scroll
+                    up/down to see more • Click "Download All" to get ZIP file
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Screenshot Modal */}
+          {isScreenshotModalOpen && screenshots.length > 0 && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="relative bg-white rounded-lg max-w-4xl max-h-[90vh] w-full overflow-hidden">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-4 border-b">
+                  <div className="flex items-center gap-3">
+                    <ImageIcon className="w-5 h-5 text-blue-600" />
+                    <div>
+                      <h3 className="font-semibold text-lg">
+                        Screenshot Preview
+                      </h3>
+                      <p className="text-sm text-slate-600">
+                        {selectedScreenshotIndex + 1} of {screenshots.length} •
+                        {screenshots[
+                          selectedScreenshotIndex
+                        ]?.timestamp.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={closeScreenshotModal}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Modal Content */}
+                <div className="relative">
+                  {/* Main Image */}
+                  <div className="flex items-center justify-center bg-gray-50 min-h-[400px] max-h-[70vh] overflow-hidden p-4">
+                    <img
+                      src={
+                        screenshots[selectedScreenshotIndex]?.url ||
+                        "/placeholder.svg"
+                      }
+                      alt={`Screenshot ${selectedScreenshotIndex + 1}`}
+                      className="max-w-full max-h-full object-contain shadow-lg rounded"
+                      style={{ maxWidth: "90vw", maxHeight: "70vh" }}
+                    />
+                  </div>
+
+                  {/* Navigation Arrows */}
+                  {screenshots.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => navigateScreenshot("prev")}
+                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all backdrop-blur-sm"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => navigateScreenshot("next")}
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all backdrop-blur-sm"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex items-center justify-between p-4 border-t bg-gray-50">
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <span>Format: {screenshotFormat.toUpperCase()}</span>
+                    {isMirrored && (
+                      <Badge variant="outline" className="text-xs">
+                        Mirrored
+                      </Badge>
+                    )}
+                    {isCropMode && (
+                      <Badge variant="outline" className="text-xs">
+                        Cropped
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {screenshots.length > 1 && (
+                      <div className="flex items-center gap-1">
+                        {screenshots.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setSelectedScreenshotIndex(index)}
+                            className={`w-2 h-2 rounded-full transition-all ${
+                              index === selectedScreenshotIndex
+                                ? "bg-blue-600"
+                                : "bg-gray-300 hover:bg-gray-400"
+                            }`}
+                          />
+                        ))}
                       </div>
                     )}
 
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Start Time: {formatTime(trimStart)}</label>
-                      <Slider
-                        value={[trimStart]}
-                        max={videoDuration || 0}
-                        step={0.1}
-                        onValueChange={([value]) => {
-                          if (isFinite(value) && videoDuration > 0) {
-                            const clampedValue = Math.max(0, Math.min(value, trimEnd))
-                            setTrimStart(clampedValue)
-                            seekTo(clampedValue)
-                          }
-                        }}
-                        className="w-full"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">End Time: {formatTime(trimEnd)}</label>
-                      <Slider
-                        value={[trimEnd]}
-                        max={videoDuration || 0}
-                        step={0.1}
-                        onValueChange={([value]) => {
-                          if (isFinite(value) && videoDuration > 0) {
-                            const clampedValue = Math.max(trimStart, Math.min(value, videoDuration))
-                            setTrimEnd(clampedValue)
-                            seekTo(clampedValue)
-                          }
-                        }}
-                        className="w-full"
-                      />
-                    </div>
-
-                    <div className="bg-slate-50 rounded-lg p-4">
-                      <div className="text-sm text-slate-600">
-                        <strong>Trimmed Duration:</strong> {formatTime(trimEnd - trimStart)}
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        Export format: {exportFormat.toUpperCase()}
-                        {exportFormat === "mp4" && mp4RecordingSupported && " (Native)"}
-                        {exportFormat === "mp4" && !mp4RecordingSupported && " (Converted)"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex justify-center gap-4 flex-wrap">
-                    <Button onClick={() => setRecordingState("stopped")} variant="outline">
-                      Cancel
-                    </Button>
-
-                    <Button onClick={downloadOriginalVideo} variant="outline" className="bg-blue-50 hover:bg-blue-100">
-                      <Download className="w-5 h-5 mr-2" />
-                      Download Original
-                    </Button>
-
                     <Button
-                      onClick={downloadTrimmedVideo}
-                      className="bg-green-600 hover:bg-green-700"
-                      disabled={trimEnd - trimStart < 0.5}
+                      onClick={() =>
+                        downloadScreenshot(screenshots[selectedScreenshotIndex])
+                      }
+                      className="bg-blue-600 hover:bg-blue-700"
                     >
-                      <Download className="w-5 h-5 mr-2" />
-                      Download Trimmed {exportFormat.toUpperCase()}
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
                     </Button>
                   </div>
-
-                  {trimEnd - trimStart < 0.5 && (
-                    <div className="text-center text-sm text-amber-600 bg-amber-50 rounded-lg p-2">
-                      ⚠️ Trimmed video must be at least 0.5 seconds long
-                    </div>
-                  )}
                 </div>
-              )}
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          )}
 
-        {/* Screenshot Gallery */}
-        {screenshots.length > 0 && (
+          {/* Hidden Canvases */}
+          <canvas ref={canvasRef} className="hidden" />
+          <canvas ref={screenshotCanvasRef} className="hidden" />
+          <canvas ref={cropCanvasRef} className="hidden" />
+          <canvas ref={effectCanvasRef} className="hidden" />
+          <canvas ref={pipCanvasRef} className="hidden" />
+          {/* Hidden video elements for screen capture */}
+          <video
+            ref={screenVideoRef}
+            className="hidden"
+            autoPlay
+            muted
+            playsInline
+          />
+          {/* Preview effect canvas is already in the video container */}
+
+          {/* Instructions */}
           <Card className="bg-white/70 backdrop-blur-sm border border-white/50 shadow-xl rounded-2xl overflow-hidden">
-            <CardHeader className="pb-4 bg-gradient-to-r from-blue-50/80 to-purple-50/80 border-b border-white/50">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl shadow-lg">
-                    <ImageIcon className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                    Recent Screenshots ({screenshotCount})
-                  </span>
-                </CardTitle>
-                <div className="flex items-center gap-3">
-                  {screenshots.length > 1 && (
-                    <Button
-                      onClick={downloadAllScreenshots}
-                      variant="outline"
-                      size="sm"
-                      disabled={isDownloadingAll}
-                      className={`shadow-sm transition-all duration-300 ${
-                        isDownloadingAll 
-                          ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 text-blue-700 cursor-not-allowed"
-                          : "bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 text-emerald-700 border-emerald-300 hover:shadow-md"
-                      }`}
-                    >
-                      {isDownloadingAll ? (
-                        <>
-                          <div className="w-4 h-4 mr-2 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                          {downloadProgress < 60 ? `Preparing... ${downloadProgress}%` 
-                           : downloadProgress < 95 ? `Creating ZIP... ${downloadProgress}%`
-                           : `Downloading... ${downloadProgress}%`}
-                        </>
-                      ) : (
-                        <>
-                          <Download className="w-4 h-4 mr-2" />
-                          Download All ({screenshots.length}) ZIP
-                        </>
-                      )}
-                    </Button>
-                  )}
-                  <Button 
-                    onClick={clearScreenshots} 
-                    variant="outline" 
-                    size="sm"
-                    className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all duration-300"
+            <CardHeader className="bg-gradient-to-r from-indigo-50/80 to-purple-50/80 border-b border-white/50">
+              <CardTitle className="text-2xl flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl shadow-lg">
+                  <svg
+                    className="w-6 h-6 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    Clear All
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              {/* Grid Layout for Better Viewing */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 gap-4 max-h-96 overflow-y-auto">
-                {screenshots.map((screenshot, index) => (
-                  <div key={screenshot.id} className="group">
-                    <div className="relative">
-                      <img
-                        src={screenshot.url || "/placeholder.svg"}
-                        alt={`Screenshot ${index + 1}`}
-                        className="w-full aspect-[3/4] object-cover bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-transparent group-hover:border-blue-400 transition-all duration-300 cursor-pointer shadow-sm group-hover:shadow-lg"
-                        onClick={() => openScreenshotModal(index)}
-                      />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-lg flex items-center justify-center">
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openScreenshotModal(index)
-                            }}
-                            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-1.5 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
-                            title="View"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              downloadScreenshot(screenshot)
-                            }}
-                            className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white p-1.5 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
-                            title="Download"
-                          >
-                            <Download className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                      {/* Screenshot Number Badge */}
-                      <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
-                        {index + 1}
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1 text-center font-medium truncate">
-                      {screenshot.timestamp.toLocaleTimeString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Show total count and scroll hint if many screenshots */}
-              {screenshots.length > 12 && (
-                <div className="mt-4 text-center text-sm text-gray-600 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200">
-                  📸 Showing all {screenshots.length} screenshots • Scroll up/down to see more • Click "Download All" to get ZIP file
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Screenshot Modal */}
-        {isScreenshotModalOpen && screenshots.length > 0 && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="relative bg-white rounded-lg max-w-4xl max-h-[90vh] w-full overflow-hidden">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-4 border-b">
-                <div className="flex items-center gap-3">
-                  <ImageIcon className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <h3 className="font-semibold text-lg">Screenshot Preview</h3>
-                    <p className="text-sm text-slate-600">
-                      {selectedScreenshotIndex + 1} of {screenshots.length} •
-                      {screenshots[selectedScreenshotIndex]?.timestamp.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-                <button onClick={closeScreenshotModal} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Modal Content */}
-              <div className="relative">
-                {/* Main Image */}
-                <div className="flex items-center justify-center bg-gray-50 min-h-[400px] max-h-[70vh] overflow-hidden p-4">
-                  <img
-                    src={screenshots[selectedScreenshotIndex]?.url || "/placeholder.svg"}
-                    alt={`Screenshot ${selectedScreenshotIndex + 1}`}
-                    className="max-w-full max-h-full object-contain shadow-lg rounded"
-                    style={{ maxWidth: '90vw', maxHeight: '70vh' }}
-                  />
-                </div>
-
-                {/* Navigation Arrows */}
-                {screenshots.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => navigateScreenshot("prev")}
-                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all backdrop-blur-sm"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => navigateScreenshot("next")}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all backdrop-blur-sm"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* Modal Footer */}
-              <div className="flex items-center justify-between p-4 border-t bg-gray-50">
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <span>Format: {screenshotFormat.toUpperCase()}</span>
-                  {isMirrored && (
-                    <Badge variant="outline" className="text-xs">
-                      Mirrored
-                    </Badge>
-                  )}
-                  {isCropMode && (
-                    <Badge variant="outline" className="text-xs">
-                      Cropped
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3">
-                  {screenshots.length > 1 && (
-                    <div className="flex items-center gap-1">
-                      {screenshots.map((_, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setSelectedScreenshotIndex(index)}
-                          className={`w-2 h-2 rounded-full transition-all ${
-                            index === selectedScreenshotIndex ? "bg-blue-600" : "bg-gray-300 hover:bg-gray-400"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={() => downloadScreenshot(screenshots[selectedScreenshotIndex])}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Hidden Canvases */}
-        <canvas ref={canvasRef} className="hidden" />
-        <canvas ref={screenshotCanvasRef} className="hidden" />
-        <canvas ref={cropCanvasRef} className="hidden" />
-        <canvas ref={effectCanvasRef} className="hidden" />
-        <canvas ref={pipCanvasRef} className="hidden" />
-        {/* Hidden video elements for screen capture */}
-        <video ref={screenVideoRef} className="hidden" autoPlay muted playsInline />
-        {/* Preview effect canvas is already in the video container */}
-
-        {/* Instructions */}
-        <Card className="bg-white/70 backdrop-blur-sm border border-white/50 shadow-xl rounded-2xl overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-indigo-50/80 to-purple-50/80 border-b border-white/50">
-            <CardTitle className="text-2xl flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl shadow-lg">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                How to Use
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6 p-8">
-            <div className="space-y-2 text-sm text-slate-600">
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">1.</span>
-                <span>
-                  Choose your preferred aspect ratio (16:9 for landscape, 9:16 for vertical/mobile, 4:3 for classic, 1:1
-                  for square)
-                </span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">2.</span>
-                <span>Use zoom controls to get closer to your subject or fit more in the frame</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">3.</span>
-                <span>Toggle mirror mode to flip the video horizontally (useful for selfie-style recording)</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">3.1.</span>
-                <span>Use Light Mode (fullscreen only): Ring light for 16:9/4:3 videos, full-screen illumination for 9:16 vertical and 1:1 square videos - controls overlay on light when needed</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">4.</span>
-                <span>
-                  Apply visual effects like blur or pixelation for privacy or artistic purposes - choose to apply to
-                  entire video or just a selected area
-                </span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">5.</span>
-                <span>Enable "Crop Mode" to select a specific area of the camera feed to record</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">6.</span>
-                <span>In crop mode, drag the orange rectangle to move it, or drag the corners to resize</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">7.</span>
-                <span>
-                  When using effects, toggle "Apply to: Selected Area" to blur or pixelate only a specific region
-                </span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">8.</span>
-                <span>Click "Take Screenshot" to capture still images in HD (1080p) or 4K quality (cropped if crop mode is active)</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">8.1.</span>
-                <span>Toggle "Quality" between HD and 4K for higher resolution screenshots (4K: 3840x2160 for 16:9, 2160x3840 for 9:16, etc.)</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">8.2.</span>
-                <span>Screenshots persist across aspect ratio changes and recording sessions - only cleared when you manually click "Clear All"</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">9.</span>
-                <span>
-                  Click on screenshots in the gallery to view them in full size with navigation and download options
-                </span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">10.</span>
-                <span>Click "Start Recording" to begin capturing video with your selected settings</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">11.</span>
-                <span>Choose your export format (MP4, AVI, MOV, 3GP for WhatsApp compatibility)</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">12.</span>
-                <span>Use the playback controls to preview your recording</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">13.</span>
-                <span>Click "Edit Video" to trim your recording by setting start and end points</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-blue-600">14.</span>
-                <span>Download your video in your chosen format</span>
-              </div>
-            </div>
-
-            {/* Keyboard Shortcuts */}
-            <div className="border-t border-gray-200 pt-6">
-              <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-3 text-lg">
-                <div className="p-2 bg-gradient-to-r from-gray-600 to-gray-700 rounded-xl">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
                 </div>
-                Keyboard Shortcuts
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
-                  <span className="font-medium text-gray-700">Toggle Crop Mode</span>
-                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">C</kbd>
+                <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                  How to Use
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6 p-8">
+              <div className="space-y-2 text-sm text-slate-600">
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">1.</span>
+                  <span>
+                    Choose your preferred aspect ratio (16:9 for landscape, 9:16
+                    for vertical/mobile, 4:3 for classic, 1:1 for square)
+                  </span>
                 </div>
-                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
-                  <span className="font-medium text-gray-700">Take Screenshot</span>
-                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">S</kbd>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">2.</span>
+                  <span>
+                    Use zoom controls to get closer to your subject or fit more
+                    in the frame
+                  </span>
                 </div>
-                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
-                  <span className="font-medium text-gray-700">Start/Stop Recording</span>
-                  <div className="flex gap-2">
-                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">R</kbd>
-                    <span className="text-gray-400 text-xs">or</span>
-                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">Space</kbd>
-                  </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">3.</span>
+                  <span>
+                    Toggle mirror mode to flip the video horizontally (useful
+                    for selfie-style recording)
+                  </span>
                 </div>
-                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
-                  <span className="font-medium text-gray-700">Toggle Fullscreen</span>
-                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">F</kbd>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">3.1.</span>
+                  <span>
+                    Use Light Mode (fullscreen only): Ring light for 16:9/4:3
+                    videos, full-screen illumination for 9:16 vertical and 1:1
+                    square videos - controls overlay on light when needed
+                  </span>
                 </div>
-                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
-                  <span className="font-medium text-gray-700">Zoom In</span>
-                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">+</kbd>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">4.</span>
+                  <span>
+                    Apply visual effects like blur or pixelation for privacy or
+                    artistic purposes - choose to apply to entire video or just
+                    a selected area
+                  </span>
                 </div>
-                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
-                  <span className="font-medium text-gray-700">Zoom Out</span>
-                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">-</kbd>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">5.</span>
+                  <span>
+                    Enable "Crop Mode" to select a specific area of the camera
+                    feed to record
+                  </span>
                 </div>
-                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
-                  <span className="font-medium text-gray-700">Reset Zoom</span>
-                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">0</kbd>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">6.</span>
+                  <span>
+                    In crop mode, drag the orange rectangle to move it, or drag
+                    the corners to resize
+                  </span>
                 </div>
-                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
-                  <span className="font-medium text-gray-700">Toggle Mirror</span>
-                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">M</kbd>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">7.</span>
+                  <span>
+                    When using effects, toggle "Apply to: Selected Area" to blur
+                    or pixelate only a specific region
+                  </span>
                 </div>
-                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
-                  <span className="font-medium text-gray-700">Toggle Light Mode (Fullscreen)</span>
-                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">L</kbd>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">8.</span>
+                  <span>
+                    Click "Take Screenshot" to capture still images in HD
+                    (1080p) or 4K quality (cropped if crop mode is active)
+                  </span>
                 </div>
-                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
-                  <span className="font-medium text-gray-700">Exit Modes/Fullscreen</span>
-                  <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">Esc</kbd>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">8.1.</span>
+                  <span>
+                    Toggle "Quality" between HD and 4K for higher resolution
+                    screenshots (4K: 3840x2160 for 16:9, 2160x3840 for 9:16,
+                    etc.)
+                  </span>
                 </div>
-                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
-                  <span className="font-medium text-gray-700">Navigate Screenshots</span>
-                  <div className="flex gap-2">
-                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">←</kbd>
-                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">→</kbd>
-                  </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">8.2.</span>
+                  <span>
+                    Screenshots persist across aspect ratio changes and
+                    recording sessions - only cleared when you manually click
+                    "Clear All"
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">9.</span>
+                  <span>
+                    Click on screenshots in the gallery to view them in full
+                    size with navigation and download options
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">10.</span>
+                  <span>
+                    Click "Start Recording" to begin capturing video with your
+                    selected settings
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">11.</span>
+                  <span>
+                    Choose your export format (MP4, AVI, MOV, 3GP for WhatsApp
+                    compatibility)
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">12.</span>
+                  <span>
+                    Use the playback controls to preview your recording
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">13.</span>
+                  <span>
+                    Click "Edit Video" to trim your recording by setting start
+                    and end points
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-blue-600">14.</span>
+                  <span>Download your video in your chosen format</span>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4 text-xs">
-                <p className="text-gray-600 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200">💡 Shortcuts work when not typing in input fields</p>
-                <p className="text-gray-600 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-3 border border-purple-200">🖱️ When zoomed in, drag to pan the video</p>
-                <p className="text-gray-600 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-3 border border-violet-200">🎨 Purple area shows where effects will be applied</p>
-                <p className="text-gray-600 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-3 border border-yellow-200">💡 Light mode: ring for 16:9/4:3, full-screen for 9:16/1:1 (fullscreen only)</p>
-                <p className="text-gray-600 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-3 border border-purple-200">📸 4K screenshots: Ultra high-res capture (3840x2160 for 16:9, up to 2160x3840 for 9:16)</p>
+
+              {/* Keyboard Shortcuts */}
+              <div className="border-t border-gray-200 pt-6">
+                <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-3 text-lg">
+                  <div className="p-2 bg-gradient-to-r from-gray-600 to-gray-700 rounded-xl">
+                    <svg
+                      className="w-4 h-4 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                      />
+                    </svg>
+                  </div>
+                  Keyboard Shortcuts
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                    <span className="font-medium text-gray-700">
+                      Toggle Crop Mode
+                    </span>
+                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">
+                      C
+                    </kbd>
+                  </div>
+                  <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                    <span className="font-medium text-gray-700">
+                      Take Screenshot
+                    </span>
+                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">
+                      S
+                    </kbd>
+                  </div>
+                  <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                    <span className="font-medium text-gray-700">
+                      Start/Stop Recording
+                    </span>
+                    <div className="flex gap-2">
+                      <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">
+                        R
+                      </kbd>
+                      <span className="text-gray-400 text-xs">or</span>
+                      <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">
+                        Space
+                      </kbd>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                    <span className="font-medium text-gray-700">
+                      Toggle Fullscreen
+                    </span>
+                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">
+                      F
+                    </kbd>
+                  </div>
+                  <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                    <span className="font-medium text-gray-700">Zoom In</span>
+                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">
+                      +
+                    </kbd>
+                  </div>
+                  <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                    <span className="font-medium text-gray-700">Zoom Out</span>
+                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">
+                      -
+                    </kbd>
+                  </div>
+                  <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                    <span className="font-medium text-gray-700">
+                      Reset Zoom
+                    </span>
+                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">
+                      0
+                    </kbd>
+                  </div>
+                  <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                    <span className="font-medium text-gray-700">
+                      Toggle Mirror
+                    </span>
+                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">
+                      M
+                    </kbd>
+                  </div>
+                  <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                    <span className="font-medium text-gray-700">
+                      Toggle Light Mode (Fullscreen)
+                    </span>
+                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">
+                      L
+                    </kbd>
+                  </div>
+                  <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                    <span className="font-medium text-gray-700">
+                      Exit Modes/Fullscreen
+                    </span>
+                    <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">
+                      Esc
+                    </kbd>
+                  </div>
+                  <div className="flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-blue-50/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/50 shadow-sm">
+                    <span className="font-medium text-gray-700">
+                      Navigate Screenshots
+                    </span>
+                    <div className="flex gap-2">
+                      <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">
+                        ←
+                      </kbd>
+                      <kbd className="px-3 py-1 bg-gradient-to-r from-white to-gray-50 border border-gray-300 rounded-lg text-xs font-mono shadow-sm">
+                        →
+                      </kbd>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4 text-xs">
+                  <p className="text-gray-600 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200">
+                    💡 Shortcuts work when not typing in input fields
+                  </p>
+                  <p className="text-gray-600 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-3 border border-purple-200">
+                    🖱️ When zoomed in, drag to pan the video
+                  </p>
+                  <p className="text-gray-600 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-3 border border-violet-200">
+                    🎨 Purple area shows where effects will be applied
+                  </p>
+                  <p className="text-gray-600 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-3 border border-yellow-200">
+                    💡 Light mode: ring for 16:9/4:3, full-screen for 9:16/1:1
+                    (fullscreen only)
+                  </p>
+                  <p className="text-gray-600 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-3 border border-purple-200">
+                    📸 4K screenshots: Ultra high-res capture (3840x2160 for
+                    16:9, up to 2160x3840 for 9:16)
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
-      )
-  }
+  )
+}
