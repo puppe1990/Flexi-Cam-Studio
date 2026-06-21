@@ -41,12 +41,14 @@ export const ExportFormatPanel: React.FC<ExportFormatPanelProps> = ({
   }
 
   return (
-    <Card>
+    <Card className="studio-panel overflow-hidden">
       <CardContent className="pt-6">
-        <div className="flex items-center justify-center gap-4">
-          <label className="text-sm font-medium">Export Format:</label>
+        <div className="flex items-center justify-center gap-4 flex-wrap">
+          <label className="studio-label normal-case tracking-normal">
+            Export format
+          </label>
           <Select value={exportFormat} onValueChange={onExportFormatChange}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-36 bg-background border-border">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -59,7 +61,10 @@ export const ExportFormatPanel: React.FC<ExportFormatPanelProps> = ({
           </Select>
 
           {exportFormat === "mp4" && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge
+              variant="secondary"
+              className="border-primary/30 bg-primary/10 text-primary font-normal"
+            >
               {mp4RecordingSupported ? "Native" : "Converted"}
             </Badge>
           )}
@@ -68,8 +73,8 @@ export const ExportFormatPanel: React.FC<ExportFormatPanelProps> = ({
         {exportFormat === "mp4" &&
           !mp4RecordingSupported &&
           !webCodecsSupported && (
-            <div className="mt-2 text-center text-sm text-amber-600 bg-amber-50 rounded-lg p-2">
-              ⚠️ MP4 export will use conversion method (may have compatibility
+            <div className="mt-4 studio-callout studio-callout--warn text-left text-sm">
+              MP4 export will use conversion (may have compatibility
               limitations)
             </div>
           )}
@@ -77,18 +82,17 @@ export const ExportFormatPanel: React.FC<ExportFormatPanelProps> = ({
           exportFormat === "avi" ||
           exportFormat === "mov" ||
           exportFormat === "3gp") && (
-          <div className="mt-2 text-center text-sm text-green-600 bg-green-50 rounded-lg p-2">
-            ✅ This format is compatible with WhatsApp
+          <div className="mt-3 studio-callout studio-callout--ok text-left text-sm">
+            WhatsApp-compatible format
             {exportFormat === "3gp" && " (optimized for mobile networks)"}
           </div>
         )}
         {(exportFormat === "avi" ||
           exportFormat === "mov" ||
           exportFormat === "3gp") && (
-          <div className="mt-2 text-center text-sm text-blue-600 bg-blue-50 rounded-lg p-2">
-            ℹ️ Note: {exportFormat.toUpperCase()} format may be saved as MP4 due
-            to browser limitations, but the file extension will be .
-            {exportFormat}
+          <div className="mt-3 studio-callout studio-callout--info text-left text-sm">
+            {exportFormat.toUpperCase()} may be saved as MP4 due to browser
+            limitations, but the file extension will be .{exportFormat}
           </div>
         )}
       </CardContent>
@@ -116,16 +120,18 @@ export const ScreenshotControlPanel: React.FC<ScreenshotControlPanelProps> = ({
   }
 
   return (
-    <Card>
+    <Card className="studio-panel overflow-hidden">
       <CardContent className="pt-6">
         <div className="flex items-center justify-center gap-6 flex-wrap">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">Screenshot Format:</label>
+            <label className="studio-label normal-case tracking-normal">
+              Screenshot
+            </label>
             <Select
               value={screenshotFormat}
               onValueChange={onScreenshotFormatChange}
             >
-              <SelectTrigger className="w-24">
+              <SelectTrigger className="w-24 bg-background border-border">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -136,29 +142,29 @@ export const ScreenshotControlPanel: React.FC<ScreenshotControlPanelProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">Timer:</label>
+            <label className="studio-label normal-case tracking-normal">
+              Timer
+            </label>
             <Select
               value={screenshotTimer.toString()}
               onValueChange={(value) =>
                 onScreenshotTimerChange(Number.parseInt(value))
               }
             >
-              <SelectTrigger className="w-28">
+              <SelectTrigger className="w-28 bg-background border-border">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="0">No Timer</SelectItem>
-                <SelectItem value="3">3 seconds</SelectItem>
-                <SelectItem value="5">5 seconds</SelectItem>
-                <SelectItem value="10">10 seconds</SelectItem>
+                <SelectItem value="0">No timer</SelectItem>
+                <SelectItem value="3">3 segundos</SelectItem>
+                <SelectItem value="5">5 segundos</SelectItem>
+                <SelectItem value="10">10 segundos</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {screenshotTimer > 0 && (
-            <div className="text-xs text-slate-500 bg-blue-50 px-3 py-1 rounded-full">
-              📸 {screenshotTimer}s delay enabled
-            </div>
+            <div className="studio-status-pill">{screenshotTimer}s delay</div>
           )}
         </div>
       </CardContent>
@@ -196,13 +202,15 @@ export const AspectRatioZoomPanel: React.FC<AspectRatioZoomPanelProps> = ({
   }
 
   return (
-    <Card>
+    <Card className="studio-panel overflow-hidden">
       <CardContent className="pt-6">
         <div className="flex items-center justify-center gap-6 flex-wrap">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">Video Aspect Ratio:</label>
+            <label className="studio-label normal-case tracking-normal">
+              Aspect ratio
+            </label>
             <Select value={aspectRatio} onValueChange={onAspectRatioChange}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-36 bg-background border-border">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -215,7 +223,9 @@ export const AspectRatioZoomPanel: React.FC<AspectRatioZoomPanelProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">Zoom:</label>
+            <label className="studio-label normal-case tracking-normal">
+              Zoom
+            </label>
             <div className="flex items-center gap-1">
               <Button
                 onClick={onZoomOut}
@@ -250,22 +260,26 @@ export const AspectRatioZoomPanel: React.FC<AspectRatioZoomPanelProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">Mirror:</label>
+            <label className="studio-label normal-case tracking-normal">
+              Mirror
+            </label>
             <Button
               onClick={onToggleMirror}
               variant={isMirrored ? "default" : "outline"}
               size="sm"
-              className={isMirrored ? "bg-green-500 hover:bg-green-600" : ""}
+              className={
+                isMirrored ? "bg-emerald-600 hover:bg-emerald-700" : ""
+              }
             >
               {isMirrored ? "On" : "Off"}
             </Button>
           </div>
 
-          <div className="text-xs text-slate-500 bg-blue-50 px-3 py-1 rounded-full">
-            {aspectRatio === "16:9" && "📺 Standard widescreen"}
-            {aspectRatio === "9:16" && "📱 Mobile vertical (Stories, Reels)"}
-            {aspectRatio === "4:3" && "📷 Classic camera ratio"}
-            {aspectRatio === "1:1" && "⬜ Square (Instagram posts)"}
+          <div className="studio-status-pill text-xs">
+            {aspectRatio === "16:9" && "Standard widescreen"}
+            {aspectRatio === "9:16" && "Vertical — Stories, Reels"}
+            {aspectRatio === "4:3" && "Classic ratio"}
+            {aspectRatio === "1:1" && "Square — Instagram"}
           </div>
         </div>
       </CardContent>
@@ -299,14 +313,16 @@ export const EffectControlPanel: React.FC<EffectControlPanelProps> = ({
   }
 
   return (
-    <Card>
+    <Card className="studio-panel overflow-hidden">
       <CardContent className="pt-6">
         <div className="space-y-4">
           <div className="flex items-center justify-center gap-6 flex-wrap">
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Effect:</label>
+              <label className="studio-label normal-case tracking-normal">
+                Effect
+              </label>
               <Select value={videoEffect} onValueChange={onVideoEffectChange}>
-                <SelectTrigger className="w-28">
+                <SelectTrigger className="w-28 bg-background border-border">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -320,9 +336,11 @@ export const EffectControlPanel: React.FC<EffectControlPanelProps> = ({
             {videoEffect !== "none" && (
               <>
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">Intensity:</label>
+                  <label className="studio-label normal-case tracking-normal">
+                    Intensity
+                  </label>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500">1</span>
+                    <span className="text-xs text-muted-foreground">1</span>
                     <Slider
                       value={[effectIntensity]}
                       min={1}
@@ -333,7 +351,7 @@ export const EffectControlPanel: React.FC<EffectControlPanelProps> = ({
                       }
                       className="w-20"
                     />
-                    <span className="text-xs text-slate-500">10</span>
+                    <span className="text-xs text-muted-foreground">10</span>
                     <span className="text-sm font-mono w-6 text-center">
                       {effectIntensity}
                     </span>
@@ -341,18 +359,15 @@ export const EffectControlPanel: React.FC<EffectControlPanelProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">Apply to:</label>
+                  <label className="studio-label normal-case tracking-normal">
+                    Apply to
+                  </label>
                   <Button
                     onClick={onToggleEffectCropMode}
                     variant={isEffectCropMode ? "default" : "outline"}
                     size="sm"
-                    className={
-                      isEffectCropMode
-                        ? "bg-purple-500 hover:bg-purple-600"
-                        : ""
-                    }
                   >
-                    {isEffectCropMode ? "Selected Area" : "Entire Video"}
+                    {isEffectCropMode ? "Selected area" : "Entire video"}
                   </Button>
                 </div>
               </>
@@ -360,30 +375,15 @@ export const EffectControlPanel: React.FC<EffectControlPanelProps> = ({
           </div>
 
           {videoEffect !== "none" && isEffectCropMode && (
-            <div className="text-center text-sm text-slate-600 bg-purple-50 rounded-lg p-3">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-                <span className="font-medium">Effect Area Mode Active</span>
-              </div>
+            <div className="studio-callout studio-callout--accent text-sm">
+              <p className="font-medium mb-1">Effect area mode active</p>
               <p>
-                {videoEffect === "blur" ? "Blur" : "Pixelate"} effect will only
-                be applied to the purple area
+                {videoEffect === "blur" ? "Blur" : "Pixelate"} will only be
+                applied to the marked area
               </p>
-              <p className="text-xs text-slate-500 mt-1">
-                Area: {Math.round(effectCropArea.width * 100)}% ×{" "}
-                {Math.round(effectCropArea.height * 100)}% • Position:{" "}
+              <p className="text-xs text-muted-foreground mt-1 font-mono">
+                {Math.round(effectCropArea.width * 100)}% ×{" "}
+                {Math.round(effectCropArea.height * 100)}% • pos{" "}
                 {Math.round(effectCropArea.x * 100)}%,{" "}
                 {Math.round(effectCropArea.y * 100)}%
               </p>
