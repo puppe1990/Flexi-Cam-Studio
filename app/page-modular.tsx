@@ -15,7 +15,13 @@ import { ScreenshotGallery } from "@/components/ScreenshotGallery"
 
 export default function CameraRecorderModular() {
   // const { cameraState, initializeCamera } = useCamera()
-  const { screenshotState, downloadScreenshot, downloadAllScreenshots, clearScreenshots, openScreenshotModal } = useScreenshot()
+  const {
+    screenshotState,
+    downloadScreenshot,
+    downloadAllScreenshots,
+    clearScreenshots,
+    openScreenshotModal,
+  } = useScreenshot()
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
@@ -25,7 +31,9 @@ export default function CameraRecorderModular() {
             <Video className="w-8 h-8 text-blue-600" />
             Camera Recorder & Editor (Modular)
           </h1>
-          <p className="text-slate-600">Modular architecture with custom hooks and components</p>
+          <p className="text-slate-600">
+            Modular architecture with custom hooks and components
+          </p>
         </div>
 
         <ScreenshotGallery
@@ -44,14 +52,24 @@ export default function CameraRecorderModular() {
           <CardContent>
             <p>The large page.tsx file has been broken down into:</p>
             <ul className="list-disc list-inside mt-2 space-y-1">
-              <li><strong>Types:</strong> types/camera.ts</li>
-              <li><strong>Utilities:</strong> lib/utils/video.ts</li>
-              <li><strong>Hooks:</strong> hooks/useCamera.ts, useScreenshot.ts, useCrop.ts, useZoom.ts, useEffects.ts</li>
-              <li><strong>Components:</strong> components/ScreenshotGallery.tsx, ScreenshotModal.tsx, ControlPanels.tsx</li>
+              <li>
+                <strong>Types:</strong> types/camera.ts
+              </li>
+              <li>
+                <strong>Utilities:</strong> lib/utils/video.ts
+              </li>
+              <li>
+                <strong>Hooks:</strong> hooks/useCamera.ts, useScreenshot.ts,
+                useCrop.ts, useZoom.ts, useEffects.ts
+              </li>
+              <li>
+                <strong>Components:</strong> components/ScreenshotGallery.tsx,
+                ScreenshotModal.tsx, ControlPanels.tsx
+              </li>
             </ul>
           </CardContent>
         </Card>
       </div>
     </div>
   )
-} 
+}

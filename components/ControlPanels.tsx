@@ -5,14 +5,20 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Slider } from "@/components/ui/slider"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { ZoomIn, ZoomOut, ZoomInIcon as ResetZoom } from "lucide-react"
-import { 
-  ExportFormat, 
-  ScreenshotFormat, 
-  AspectRatio, 
-  VideoEffect, 
-  RecordingState 
+import {
+  ExportFormat,
+  ScreenshotFormat,
+  AspectRatio,
+  VideoEffect,
+  RecordingState,
 } from "@/types/camera"
 
 interface ExportFormatPanelProps {
@@ -59,21 +65,30 @@ export const ExportFormatPanel: React.FC<ExportFormatPanelProps> = ({
           )}
         </div>
 
-        {exportFormat === "mp4" && !mp4RecordingSupported && !webCodecsSupported && (
-          <div className="mt-2 text-center text-sm text-amber-600 bg-amber-50 rounded-lg p-2">
-            ⚠️ MP4 export will use conversion method (may have compatibility limitations)
-          </div>
-        )}
-        {(exportFormat === "mp4" || exportFormat === "avi" || exportFormat === "mov" || exportFormat === "3gp") && (
+        {exportFormat === "mp4" &&
+          !mp4RecordingSupported &&
+          !webCodecsSupported && (
+            <div className="mt-2 text-center text-sm text-amber-600 bg-amber-50 rounded-lg p-2">
+              ⚠️ MP4 export will use conversion method (may have compatibility
+              limitations)
+            </div>
+          )}
+        {(exportFormat === "mp4" ||
+          exportFormat === "avi" ||
+          exportFormat === "mov" ||
+          exportFormat === "3gp") && (
           <div className="mt-2 text-center text-sm text-green-600 bg-green-50 rounded-lg p-2">
             ✅ This format is compatible with WhatsApp
             {exportFormat === "3gp" && " (optimized for mobile networks)"}
           </div>
         )}
-        {(exportFormat === "avi" || exportFormat === "mov" || exportFormat === "3gp") && (
+        {(exportFormat === "avi" ||
+          exportFormat === "mov" ||
+          exportFormat === "3gp") && (
           <div className="mt-2 text-center text-sm text-blue-600 bg-blue-50 rounded-lg p-2">
-            ℹ️ Note: {exportFormat.toUpperCase()} format may be saved as MP4 due to browser limitations, but the
-            file extension will be .{exportFormat}
+            ℹ️ Note: {exportFormat.toUpperCase()} format may be saved as MP4 due
+            to browser limitations, but the file extension will be .
+            {exportFormat}
           </div>
         )}
       </CardContent>
@@ -106,7 +121,10 @@ export const ScreenshotControlPanel: React.FC<ScreenshotControlPanelProps> = ({
         <div className="flex items-center justify-center gap-6 flex-wrap">
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium">Screenshot Format:</label>
-            <Select value={screenshotFormat} onValueChange={onScreenshotFormatChange}>
+            <Select
+              value={screenshotFormat}
+              onValueChange={onScreenshotFormatChange}
+            >
               <SelectTrigger className="w-24">
                 <SelectValue />
               </SelectTrigger>
@@ -121,7 +139,9 @@ export const ScreenshotControlPanel: React.FC<ScreenshotControlPanelProps> = ({
             <label className="text-sm font-medium">Timer:</label>
             <Select
               value={screenshotTimer.toString()}
-              onValueChange={(value) => onScreenshotTimerChange(Number.parseInt(value))}
+              onValueChange={(value) =>
+                onScreenshotTimerChange(Number.parseInt(value))
+              }
             >
               <SelectTrigger className="w-28">
                 <SelectValue />
@@ -197,18 +217,32 @@ export const AspectRatioZoomPanel: React.FC<AspectRatioZoomPanelProps> = ({
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium">Zoom:</label>
             <div className="flex items-center gap-1">
-              <Button onClick={onZoomOut} variant="outline" size="sm" disabled={zoomLevel <= 0.5}>
+              <Button
+                onClick={onZoomOut}
+                variant="outline"
+                size="sm"
+                disabled={zoomLevel <= 0.5}
+              >
                 <ZoomOut className="w-4 h-4" />
               </Button>
-              <span className="text-sm font-mono w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
-              <Button onClick={onZoomIn} variant="outline" size="sm" disabled={zoomLevel >= 3}>
+              <span className="text-sm font-mono w-12 text-center">
+                {Math.round(zoomLevel * 100)}%
+              </span>
+              <Button
+                onClick={onZoomIn}
+                variant="outline"
+                size="sm"
+                disabled={zoomLevel >= 3}
+              >
                 <ZoomIn className="w-4 h-4" />
               </Button>
               <Button
                 onClick={onResetZoom}
                 variant="outline"
                 size="sm"
-                disabled={zoomLevel === 1 && panOffset.x === 0 && panOffset.y === 0}
+                disabled={
+                  zoomLevel === 1 && panOffset.x === 0 && panOffset.y === 0
+                }
               >
                 <ResetZoom className="w-4 h-4" />
               </Button>
@@ -294,11 +328,15 @@ export const EffectControlPanel: React.FC<EffectControlPanelProps> = ({
                       min={1}
                       max={10}
                       step={1}
-                      onValueChange={([value]) => onEffectIntensityChange(value)}
+                      onValueChange={([value]) =>
+                        onEffectIntensityChange(value)
+                      }
                       className="w-20"
                     />
                     <span className="text-xs text-slate-500">10</span>
-                    <span className="text-sm font-mono w-6 text-center">{effectIntensity}</span>
+                    <span className="text-sm font-mono w-6 text-center">
+                      {effectIntensity}
+                    </span>
                   </div>
                 </div>
 
@@ -308,7 +346,11 @@ export const EffectControlPanel: React.FC<EffectControlPanelProps> = ({
                     onClick={onToggleEffectCropMode}
                     variant={isEffectCropMode ? "default" : "outline"}
                     size="sm"
-                    className={isEffectCropMode ? "bg-purple-500 hover:bg-purple-600" : ""}
+                    className={
+                      isEffectCropMode
+                        ? "bg-purple-500 hover:bg-purple-600"
+                        : ""
+                    }
                   >
                     {isEffectCropMode ? "Selected Area" : "Entire Video"}
                   </Button>
@@ -320,7 +362,12 @@ export const EffectControlPanel: React.FC<EffectControlPanelProps> = ({
           {videoEffect !== "none" && isEffectCropMode && (
             <div className="text-center text-sm text-slate-600 bg-purple-50 rounded-lg p-3">
               <div className="flex items-center justify-center gap-2 mb-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -330,10 +377,15 @@ export const EffectControlPanel: React.FC<EffectControlPanelProps> = ({
                 </svg>
                 <span className="font-medium">Effect Area Mode Active</span>
               </div>
-              <p>{videoEffect === "blur" ? "Blur" : "Pixelate"} effect will only be applied to the purple area</p>
+              <p>
+                {videoEffect === "blur" ? "Blur" : "Pixelate"} effect will only
+                be applied to the purple area
+              </p>
               <p className="text-xs text-slate-500 mt-1">
-                Area: {Math.round(effectCropArea.width * 100)}% × {Math.round(effectCropArea.height * 100)}% •
-                Position: {Math.round(effectCropArea.x * 100)}%, {Math.round(effectCropArea.y * 100)}%
+                Area: {Math.round(effectCropArea.width * 100)}% ×{" "}
+                {Math.round(effectCropArea.height * 100)}% • Position:{" "}
+                {Math.round(effectCropArea.x * 100)}%,{" "}
+                {Math.round(effectCropArea.y * 100)}%
               </p>
             </div>
           )}
@@ -341,4 +393,4 @@ export const EffectControlPanel: React.FC<EffectControlPanelProps> = ({
       </CardContent>
     </Card>
   )
-} 
+}

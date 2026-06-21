@@ -1,4 +1,9 @@
-export type RecordingState = "idle" | "recording" | "stopped" | "editing" | "processing"
+export type RecordingState =
+  | "idle"
+  | "recording"
+  | "stopped"
+  | "editing"
+  | "processing"
 export type ExportFormat = "webm" | "mp4" | "avi" | "mov" | "3gp"
 export type ScreenshotFormat = "png" | "jpeg"
 export type AspectRatio = "16:9" | "9:16" | "4:3" | "1:1"
@@ -94,4 +99,4 @@ export interface VideoRefs {
   chunksRef: React.RefObject<Blob[]>
   recordingIntervalRef: React.RefObject<NodeJS.Timeout | null>
   previewEffectAnimationRef: React.RefObject<number | null>
-} 
+}

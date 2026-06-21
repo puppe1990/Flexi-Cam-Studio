@@ -1,6 +1,10 @@
 import { ExportFormat } from "@/types/camera"
 
-export const downloadBlob = (blob: Blob, filename: string, exportFormat: ExportFormat) => {
+export const downloadBlob = (
+  blob: Blob,
+  filename: string,
+  exportFormat: ExportFormat
+) => {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
   let finalFilename = filename
   let extension = exportFormat
@@ -43,11 +47,15 @@ export const formatTime = (seconds: number): string => {
 
 export const checkVideoSupport = () => {
   // Check WebCodecs support
-  const webCodecsSupported = "VideoEncoder" in window && "VideoDecoder" in window && "AudioEncoder" in window
+  const webCodecsSupported =
+    "VideoEncoder" in window &&
+    "VideoDecoder" in window &&
+    "AudioEncoder" in window
 
   // Check MP4 recording support
   const mp4Supported =
-    MediaRecorder.isTypeSupported("video/mp4") || MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")
+    MediaRecorder.isTypeSupported("video/mp4") ||
+    MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")
 
   return {
     webCodecsSupported,
@@ -59,7 +67,7 @@ export const calculateVideoAspectRatio = (
   videoWidth: number,
   videoHeight: number,
   containerWidth: number,
-  containerHeight: number,
+  containerHeight: number
 ) => {
   const videoAspectRatio = videoWidth / videoHeight
   const containerAspectRatio = containerWidth / containerHeight
@@ -89,14 +97,20 @@ export const calculateVideoAspectRatio = (
   }
 }
 
-export const applyManualBlur = (imageData: ImageData, radius: number): ImageData => {
+export const applyManualBlur = (
+  imageData: ImageData,
+  radius: number
+): ImageData => {
   const { data, width, height } = imageData
   const output = new ImageData(width, height)
   const outputData = output.data
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      let r = 0, g = 0, b = 0, a = 0
+      let r = 0,
+        g = 0,
+        b = 0,
+        a = 0
       let count = 0
 
       for (let dy = -radius; dy <= radius; dy++) {
@@ -122,4 +136,4 @@ export const applyManualBlur = (imageData: ImageData, radius: number): ImageData
   }
 
   return output
-} 
+}

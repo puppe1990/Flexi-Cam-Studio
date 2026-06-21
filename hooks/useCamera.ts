@@ -29,7 +29,7 @@ export const useCamera = () => {
 
   const initializeCamera = useCallback(async () => {
     try {
-      setCameraState(prev => ({ ...prev, cameraError: null }))
+      setCameraState((prev) => ({ ...prev, cameraError: null }))
 
       // Calculate video constraints based on aspect ratio
       let videoConstraints: MediaTrackConstraints
@@ -58,7 +58,7 @@ export const useCamera = () => {
 
       // Check video support
       const support = checkVideoSupport()
-      setCameraState(prev => ({
+      setCameraState((prev) => ({
         ...prev,
         webCodecsSupported: support.webCodecsSupported,
         mp4RecordingSupported: support.mp4RecordingSupported,
@@ -68,16 +68,16 @@ export const useCamera = () => {
       return stream
     } catch (error) {
       console.error("Error accessing camera:", error)
-      setCameraState(prev => ({
+      setCameraState((prev) => ({
         ...prev,
-        cameraError: "Unable to access camera. Please check permissions."
+        cameraError: "Unable to access camera. Please check permissions.",
       }))
       return null
     }
   }, [aspectRatio])
 
   const toggleMirror = useCallback(() => {
-    setIsMirrored(prev => !prev)
+    setIsMirrored((prev) => !prev)
   }, [])
 
   const toggleFullscreen = useCallback(async () => {
@@ -95,7 +95,7 @@ export const useCamera = () => {
   }, [])
 
   const updateCameraState = useCallback((updates: Partial<CameraState>) => {
-    setCameraState(prev => ({ ...prev, ...updates }))
+    setCameraState((prev) => ({ ...prev, ...updates }))
   }, [])
 
   const resetCamera = useCallback(() => {
@@ -132,4 +132,4 @@ export const useCamera = () => {
     updateCameraState,
     resetCamera,
   }
-} 
+}

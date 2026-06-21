@@ -6,12 +6,14 @@ A powerful web-based camera recording and editing application built with Next.js
 ## Features
 
 ### Video Recording
+
 - 📹 Camera recording with real-time preview
 - ⏱️ Recording timer and duration tracking
 - 📊 Multiple export formats (WebM, MP4, AVI, MOV, 3GP)
 - 💾 Automatic file naming with timestamps
 
 ### Video Editing
+
 - ✂️ Video trimming with start/end points
 - 🎯 Crop tool with draggable/resizable interface
 - 📐 Multiple aspect ratios (16:9, 9:16, 4:3, 1:1)
@@ -19,12 +21,14 @@ A powerful web-based camera recording and editing application built with Next.js
 - ↔️ Mirror effect toggle
 
 ### Effects and Filters
+
 - 🌫️ Blur effect with adjustable intensity
 - 🎨 Pixelate effect
 - 🎯 Effect-specific cropping
 - 🎭 Real-time effect preview
 
 ### Screenshot System
+
 - 📸 Screenshot capture in PNG and JPEG formats
 - ⏲️ Timer functionality for delayed captures
 - ⚡ Flash effect for better visibility
@@ -50,12 +54,14 @@ A powerful web-based camera recording and editing application built with Next.js
 ## Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/yourusername/camera-recorder.git
 cd camera-recorder
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 # or
@@ -63,6 +69,7 @@ yarn install
 ```
 
 3. Start the development server:
+
 ```bash
 npm run dev
 # or
@@ -74,18 +81,21 @@ yarn dev
 ## Usage
 
 ### Recording Video
+
 1. Click the camera icon to start recording
 2. Use the pause button to temporarily stop recording
 3. Click the stop button to end recording
 4. The recorded video will be available for editing
 
 ### Taking Screenshots
+
 1. Click the camera icon while recording or viewing a video
 2. Use the timer option for delayed captures
 3. View captured screenshots in the gallery
 4. Download individual or all screenshots
 
 ### Editing Video
+
 1. Use the trim controls to set start and end points
 2. Apply crop by dragging the crop handles
 3. Adjust aspect ratio using the ratio selector
@@ -93,6 +103,7 @@ yarn dev
 5. Use zoom and pan for detailed editing
 
 ### Exporting
+
 1. Select your desired export format
 2. Click the download button
 3. The video will be processed and downloaded automatically
@@ -109,6 +120,7 @@ Note: Some features may require specific browser capabilities. The application w
 ## Development
 
 ### Project Structure
+
 ```
 app/
 ├── layout.tsx      # Root layout
@@ -143,4 +155,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Next.js](https://nextjs.org/)
 - [Radix UI](https://www.radix-ui.com/)
 - [Tailwind CSS](https://tailwindcss.com/)
-- [JSZip](https://stuk.github.io/jszip/) 
+- [JSZip](https://stuk.github.io/jszip/)
