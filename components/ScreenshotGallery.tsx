@@ -28,12 +28,14 @@ export const ScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="studio-panel overflow-hidden">
+      <CardHeader className="studio-panel-header pb-0">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <ImageIcon className="w-5 h-5" />
-            Recent Screenshots ({screenshotCount})
+          <CardTitle className="text-lg flex items-center gap-3 font-semibold">
+            <div className="studio-icon-btn p-1.5">
+              <ImageIcon className="w-4 h-4" />
+            </div>
+            Screenshots ({screenshotCount})
           </CardTitle>
           <div className="flex items-center gap-2">
             {screenshots.length > 1 && (
@@ -41,19 +43,19 @@ export const ScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({
                 onClick={onDownloadAll}
                 variant="outline"
                 size="sm"
-                className="bg-green-50 hover:bg-green-100 text-green-700 border-green-300"
+                className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
               >
                 <Download className="w-4 h-4 mr-1" />
-                Download All ZIP
+                Download ZIP
               </Button>
             )}
             <Button onClick={onClearAll} variant="outline" size="sm">
-              Clear All
+              Clear
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-4">
         <div className="flex gap-3 overflow-x-auto pb-2">
           {screenshots.map((screenshot, index) => (
             <div key={screenshot.id} className="flex-shrink-0 group">
@@ -61,18 +63,18 @@ export const ScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({
                 <img
                   src={screenshot.url || "/placeholder.svg"}
                   alt="Screenshot"
-                  className="w-24 h-16 object-cover rounded border-2 border-transparent group-hover:border-blue-400 transition-all cursor-pointer"
+                  className="w-24 h-16 object-cover rounded-md border border-border group-hover:border-primary transition-colors cursor-pointer"
                   onClick={() => onScreenshotClick(index)}
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all rounded-md flex items-center justify-center">
                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         onScreenshotClick(index)
                       }}
-                      className="bg-blue-500 hover:bg-blue-600 text-white p-1 rounded"
-                      title="View"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground p-1 rounded-full"
+                      title="Ver"
                     >
                       <svg
                         className="w-3 h-3"
@@ -99,15 +101,15 @@ export const ScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({
                         e.stopPropagation()
                         onDownloadScreenshot(screenshot)
                       }}
-                      className="bg-green-500 hover:bg-green-600 text-white p-1 rounded"
-                      title="Download"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white p-1 rounded-full"
+                      title="Baixar"
                     >
                       <Download className="w-3 h-3" />
                     </button>
                   </div>
                 </div>
               </div>
-              <div className="text-xs text-slate-500 mt-1 text-center">
+              <div className="text-xs text-muted-foreground mt-1 text-center font-mono">
                 {screenshot.timestamp.toLocaleTimeString()}
               </div>
             </div>
