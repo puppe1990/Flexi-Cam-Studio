@@ -41,32 +41,22 @@ import {
   loadScreenshots,
   saveScreenshots,
 } from "@/lib/screenshot-storage"
-
-// Types (can be imported from types/camera.ts)
-type RecordingState =
-  | "idle"
-  | "recording"
-  | "stopped"
-  | "editing"
-  | "processing"
-type ExportFormat = "webm" | "mp4" | "avi" | "mov" | "3gp"
-type ScreenshotFormat = "png" | "jpeg"
-type AspectRatio = "16:9" | "9:16" | "4:3" | "1:1"
-type RecordingMode = "webcam" | "screen" | "pip" // Picture-in-Picture
-
-interface CropArea {
-  x: number
-  y: number
-  width: number
-  height: number
-}
-
-interface PipPosition {
-  x: number // percentage from left
-  y: number // percentage from top
-  width: number // percentage of screen width
-  height: number // percentage of screen height
-}
+import {
+  applyManualBlur,
+  checkVideoSupport,
+  downloadBlob,
+  formatTime,
+} from "@/lib/utils/video"
+import type {
+  AspectRatio,
+  CropArea,
+  ExportFormat,
+  PipPosition,
+  RecordingMode,
+  RecordingState,
+  ScreenshotFormat,
+  VideoEffect,
+} from "@/types/camera"
 
 export default function CameraRecorder() {
   const [recordingState, setRecordingState] = useState<RecordingState>("idle")
@@ -120,9 +110,7 @@ export default function CameraRecorder() {
   const [, setVideoContainerSize] = useState({ width: 0, height: 0 })
 
   // Aspect ratio functionality
-  const [aspectRatio, setAspectRatio] = useState<
-    "16:9" | "9:16" | "4:3" | "1:1"
-  >("16:9")
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>("16:9")
 
   // Zoom functionality
   const [zoomLevel, setZoomLevel] = useState(1)
@@ -134,7 +122,6 @@ export default function CameraRecorder() {
   const [isMirrored, setIsMirrored] = useState(false)
 
   // Effect functionality
-  type VideoEffect = "none" | "blur" | "pixelate"
   const [videoEffect, setVideoEffect] = useState<VideoEffect>("none")
   const [effectIntensity, setEffectIntensity] = useState(5) // 1-10 scale
 
@@ -293,45 +280,6 @@ export default function CameraRecorder() {
       containerHeight: containerRect.height,
     }
   }, [aspectRatio, isFullscreen, isCropMode, isEffectCropMode])
-
-  // Utility function to download blob with better file handling
-  const downloadBlob = useCallback(
-    (blob: Blob, filename: string) => {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
-      let finalFilename = filename
-      let extension = exportFormat // Use the selected export format directly
-
-      // Override extension based on actual blob type if it's different
-      if (blob.type.includes("mp4")) {
-        extension = "mp4"
-      } else if (blob.type.includes("webm")) {
-        extension = "webm"
-      } else if (blob.type.includes("avi") || blob.type.includes("msvideo")) {
-        extension = "avi"
-      } else if (blob.type.includes("quicktime")) {
-        extension = "mov"
-      } else if (blob.type.includes("3gpp")) {
-        extension = "3gp"
-      }
-
-      finalFilename = `video-${timestamp}.${extension}`
-
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = finalFilename
-      a.style.display = "none"
-
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-
-      setTimeout(() => {
-        URL.revokeObjectURL(url)
-      }, 1000)
-    },
-    [exportFormat]
-  )
 
   // Zoom controls
   const zoomIn = useCallback(() => {
@@ -757,9 +705,13 @@ export default function CameraRecorder() {
     if (!recordedBlob) return
 
     // Use the selected export format for the filename, even if the actual format is different
-    downloadBlob(recordedBlob, `original-video-${Date.now()}.${exportFormat}`)
+    downloadBlob(
+      recordedBlob,
+      `original-video-${Date.now()}.${exportFormat}`,
+      exportFormat
+    )
     setRecordingState("stopped")
-  }, [recordedBlob, exportFormat, downloadBlob])
+  }, [recordedBlob, exportFormat])
 
   // Process and download video with format selection
   const downloadTrimmedVideo = useCallback(async () => {
@@ -770,7 +722,11 @@ export default function CameraRecorder() {
       Math.abs(trimStart - 0) < 0.1 &&
       Math.abs(trimEnd - videoDuration) < 0.1
     ) {
-      downloadBlob(recordedBlob, `recorded-video-${Date.now()}.${exportFormat}`)
+      downloadBlob(
+        recordedBlob,
+        `recorded-video-${Date.now()}.${exportFormat}`,
+        exportFormat
+      )
       return
     }
 
@@ -788,7 +744,11 @@ export default function CameraRecorder() {
         processedBlob = await trimVideoWithWebAPIs()
       }
 
-      downloadBlob(processedBlob, `trimmed-video-${Date.now()}.${exportFormat}`)
+      downloadBlob(
+        processedBlob,
+        `trimmed-video-${Date.now()}.${exportFormat}`,
+        exportFormat
+      )
     } catch (error) {
       console.error("Export failed, downloading original:", error)
       // Fallback: download original video
@@ -806,27 +766,16 @@ export default function CameraRecorder() {
     convertVideo,
     trimVideoWithWebAPIs,
     downloadOriginalVideo,
-    downloadBlob,
   ])
 
   // Check WebCodecs and MP4 support
   useEffect(() => {
     const checkSupport = () => {
-      // Check WebCodecs support
-      const webCodecsSupported =
-        "VideoEncoder" in window &&
-        "VideoDecoder" in window &&
-        "AudioEncoder" in window
-      setWebCodecsSupported(webCodecsSupported)
+      const support = checkVideoSupport()
+      setWebCodecsSupported(support.webCodecsSupported)
+      setMp4RecordingSupported(support.mp4RecordingSupported)
 
-      // Check MP4 recording support
-      const mp4Supported =
-        MediaRecorder.isTypeSupported("video/mp4") ||
-        MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")
-      setMp4RecordingSupported(mp4Supported)
-
-      // Set default format based on support
-      if (mp4Supported || webCodecsSupported) {
+      if (support.mp4RecordingSupported || support.webCodecsSupported) {
         setExportFormat("mp4")
       }
     }
@@ -1064,48 +1013,6 @@ export default function CameraRecorder() {
 
     return canvasStream
   }, [cropArea, isFullscreen, isMirrored])
-
-  // Manual blur function as fallback
-  const applyManualBlur = useCallback(
-    (imageData: ImageData, radius: number): ImageData => {
-      const { data, width, height } = imageData
-      const output = new ImageData(width, height)
-      const outputData = output.data
-
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          let r = 0,
-            g = 0,
-            b = 0,
-            a = 0
-          let count = 0
-
-          for (let dy = -radius; dy <= radius; dy++) {
-            for (let dx = -radius; dx <= radius; dx++) {
-              const nx = Math.max(0, Math.min(width - 1, x + dx))
-              const ny = Math.max(0, Math.min(height - 1, y + dy))
-              const i = (ny * width + nx) * 4
-
-              r += data[i]
-              g += data[i + 1]
-              b += data[i + 2]
-              a += data[i + 3]
-              count++
-            }
-          }
-
-          const i = (y * width + x) * 4
-          outputData[i] = r / count
-          outputData[i + 1] = g / count
-          outputData[i + 2] = b / count
-          outputData[i + 3] = a / count
-        }
-      }
-
-      return output
-    },
-    []
-  )
 
   // Shared function to calculate effect area coordinates in video space
   const calculateEffectAreaInVideoSpace = useCallback(
@@ -3331,13 +3238,6 @@ export default function CameraRecorder() {
       recalculateCropAreas()
     }
   }, [isFullscreen, isLightMode, recalculateCropAreas])
-
-  // Format time display
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
-  }
 
   // Generate thumbnails for timeline
   const generateThumbnails = useCallback(async () => {

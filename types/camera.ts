@@ -8,6 +8,14 @@ export type ExportFormat = "webm" | "mp4" | "avi" | "mov" | "3gp"
 export type ScreenshotFormat = "png" | "jpeg"
 export type AspectRatio = "16:9" | "9:16" | "4:3" | "1:1"
 export type VideoEffect = "none" | "blur" | "pixelate"
+export type RecordingMode = "webcam" | "screen" | "pip"
+
+export interface PipPosition {
+  x: number
+  y: number
+  width: number
+  height: number
+}
 
 export interface CropArea {
   x: number
