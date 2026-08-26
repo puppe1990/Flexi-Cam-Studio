@@ -1,3 +1,5 @@
+/** Orchestrates camera, screenshot, crop, PIP, and export for the live studio.
+ *  Still oversized — extract the next feature into hooks/ or lib/, do not add more here. */
 import { useState, useRef, useEffect, useCallback } from "react"
 import JSZip from "jszip"
 import {
