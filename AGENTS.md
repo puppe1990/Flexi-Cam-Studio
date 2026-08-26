@@ -1,6 +1,6 @@
 # Agent rules — FlexiCam Studio
 
-Browser camera recorder (Next.js 15 App Router). The live UI is `app/page.tsx`. `app/page-modular.tsx` is an unused stub — do not treat it as the app.
+Browser camera recorder (Next.js 15 App Router). The live UI is `app/page.tsx` (composer). Session logic lives in `hooks/useStudioSession.ts`. Preview UI lives in `components/studio/`.
 
 ## Commands
 
@@ -16,7 +16,7 @@ Browser camera recorder (Next.js 15 App Router). The live UI is `app/page.tsx`. 
 
 - Functions: 4–20 lines. Split if longer.
 - Files: under 500 lines. Target 200–300.
-- **Do not add features inside `app/page.tsx` (~6700 lines).** Extract a hook (`hooks/`), a pure module (`lib/`), or a component (`components/`), then wire a thin call site.
+- **Do not add features inside `app/page.tsx` or grow `hooks/useStudioSession.ts`.** Extract a hook (`hooks/`), a pure module (`lib/`), or a component (`components/studio/`), then wire a thin call site.
 - One responsibility per module. Prefer three 250-line files over growing `page.tsx`.
 - Names: specific and unique. Avoid `data`, `handler`, `Manager`, `utils` dumping grounds. Prefer symbols with <5 grep hits (`loadScreenshots`, `actuallyTakeScreenshot`).
 - Types: import from `types/camera.ts`. Do not redeclare `RecordingState` / `Screenshot` in `page.tsx`. No `any` on public APIs.
@@ -39,13 +39,14 @@ Browser camera recorder (Next.js 15 App Router). The live UI is `app/page.tsx`. 
 ## Structure
 
 ```
-app/page.tsx        # LIVE composer — do not grow
-hooks/              # camera, screenshot, crop, zoom, effects
-lib/                # pure helpers (screenshot-storage, video)
-types/camera.ts     # shared domain types
-components/         # gallery, modal, control panels, theme
-components/ui/      # shadcn — do not restyle unless asked
-__tests__/lib/      # mirrors lib/
+app/page.tsx              # LIVE composer — do not grow
+hooks/useStudioSession.ts # session orchestration — split, do not grow
+hooks/useStudioZoom.ts
+lib/                      # screenshot-storage, video, video-display-area
+types/camera.ts
+components/studio/        # header, hero, gallery, modal, how-to
+components/ui/            # shadcn — do not restyle unless asked
+__tests__/                # mirrors lib/ and components/
 ```
 
 ## Dependencies
