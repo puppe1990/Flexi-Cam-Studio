@@ -1,6 +1,11 @@
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { ScreenshotState, Screenshot, ScreenshotFormat } from "@/types/camera"
 import JSZip from "jszip"
+import {
+  clearStoredScreenshots,
+  loadScreenshots,
+  saveScreenshots,
+} from "@/lib/screenshot-storage"
 
 export const useScreenshot = () => {
   const [screenshotState, setScreenshotState] = useState<ScreenshotState>({
@@ -17,16 +22,30 @@ export const useScreenshot = () => {
 
   const screenshotCanvasRef = useRef<HTMLCanvasElement>(null)
 
+  useEffect(() => {
+    const stored = loadScreenshots()
+    if (stored.length === 0) return
+    setScreenshotState((prev) => ({
+      ...prev,
+      screenshots: stored,
+      screenshotCount: stored.length,
+    }))
+  }, [])
+
   const setShowFlash = useCallback((show: boolean) => {
     setScreenshotState((prev) => ({ ...prev, showFlash: show }))
   }, [])
 
   const addScreenshot = useCallback((screenshot: Screenshot) => {
-    setScreenshotState((prev) => ({
-      ...prev,
-      screenshots: [screenshot, ...prev.screenshots], // Keep all screenshots
-      screenshotCount: prev.screenshotCount + 1,
-    }))
+    setScreenshotState((prev) => {
+      const screenshots = [screenshot, ...prev.screenshots]
+      saveScreenshots(screenshots)
+      return {
+        ...prev,
+        screenshots,
+        screenshotCount: prev.screenshotCount + 1,
+      }
+    })
   }, [])
 
   const downloadScreenshot = useCallback(
@@ -94,8 +113,11 @@ export const useScreenshot = () => {
   const clearScreenshots = useCallback(() => {
     setScreenshotState((prev) => {
       prev.screenshots.forEach((screenshot) => {
-        URL.revokeObjectURL(screenshot.url)
+        if (!screenshot.url.startsWith("data:")) {
+          URL.revokeObjectURL(screenshot.url)
+        }
       })
+      clearStoredScreenshots()
       return { ...prev, screenshots: [] }
     })
   }, [])

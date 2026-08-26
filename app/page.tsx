@@ -35,6 +35,12 @@ import {
 
 import JSZip from "jszip"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import {
+  blobToDataUrl,
+  clearStoredScreenshots,
+  loadScreenshots,
+  saveScreenshots,
+} from "@/lib/screenshot-storage"
 
 // Types (can be imported from types/camera.ts)
 type RecordingState =
@@ -2818,34 +2824,41 @@ export default function CameraRecorder() {
     )
 
     canvas.toBlob(
-      (blob) => {
-        if (blob) {
-          try {
-            const screenshotId = `screenshot-${Date.now()}`
-            const screenshotUrl = URL.createObjectURL(blob)
+      async (blob) => {
+        if (!blob) {
+          clearTimeout(safetyTimeout)
+          isCapturingRef.current = false
+          setIsCapturingScreenshot(false)
+          return
+        }
 
-            // Add to screenshots array
-            const newScreenshot = {
-              id: screenshotId,
-              url: screenshotUrl,
-              timestamp: new Date(),
-            }
+        try {
+          const screenshotId = `screenshot-${Date.now()}`
+          const screenshotUrl = await blobToDataUrl(blob)
 
-            setScreenshots((prev) => [newScreenshot, ...prev]) // Keep all screenshots
-            setScreenshotCount((prev) => prev + 1)
-
-            console.log(
-              `✅ Screenshot saved successfully! Resolution: ${canvas.width}x${canvas.height} (${isHDScreenshot ? "HD/4K" : "Standard"}) - Vertical: ${canvas.height > canvas.width}`
-            )
-          } catch (error) {
-            console.error("Error creating screenshot:", error)
-          } finally {
-            // Always reset the capturing flags
-            clearTimeout(safetyTimeout)
-            isCapturingRef.current = false
-            setIsCapturingScreenshot(false)
-            console.log("📸 Screenshot capture completed, flags reset")
+          const newScreenshot = {
+            id: screenshotId,
+            url: screenshotUrl,
+            timestamp: new Date(),
           }
+
+          setScreenshots((prev) => {
+            const next = [newScreenshot, ...prev]
+            saveScreenshots(next)
+            return next
+          })
+          setScreenshotCount((prev) => prev + 1)
+
+          console.log(
+            `✅ Screenshot saved successfully! Resolution: ${canvas.width}x${canvas.height} (${isHDScreenshot ? "HD/4K" : "Standard"}) - Vertical: ${canvas.height > canvas.width}`
+          )
+        } catch (error) {
+          console.error("Error creating screenshot:", error)
+        } finally {
+          clearTimeout(safetyTimeout)
+          isCapturingRef.current = false
+          setIsCapturingScreenshot(false)
+          console.log("📸 Screenshot capture completed, flags reset")
         }
       },
       `image/${screenshotFormat}`,
@@ -3033,12 +3046,14 @@ export default function CameraRecorder() {
   // Clear screenshots - simplified to avoid circular dependencies
   const clearScreenshots = useCallback(() => {
     setScreenshots((prevScreenshots) => {
-      // Clean up URLs
       prevScreenshots.forEach((screenshot) => {
-        URL.revokeObjectURL(screenshot.url)
+        if (!screenshot.url.startsWith("data:")) {
+          URL.revokeObjectURL(screenshot.url)
+        }
       })
       return []
     })
+    clearStoredScreenshots()
   }, [])
 
   // Start recording with format selection and crop support
@@ -3444,6 +3459,14 @@ export default function CameraRecorder() {
     setIsMounted(true)
   }, [])
 
+  useEffect(() => {
+    if (!isMounted) return
+    const stored = loadScreenshots()
+    if (stored.length === 0) return
+    setScreenshots(stored)
+    setScreenshotCount(stored.length)
+  }, [isMounted])
+
   // Initialize camera on mount (only on client side)
   useEffect(() => {
     if (!isMounted) return
@@ -3481,7 +3504,9 @@ export default function CameraRecorder() {
       // Cleanup screenshots on unmount only
       setScreenshots((prevScreenshots) => {
         prevScreenshots.forEach((screenshot) => {
-          URL.revokeObjectURL(screenshot.url)
+          if (!screenshot.url.startsWith("data:")) {
+            URL.revokeObjectURL(screenshot.url)
+          }
         })
         return []
       })
