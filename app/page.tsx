@@ -23,6 +23,8 @@ import {
   checkVideoSupport,
   downloadBlob,
 } from "@/lib/utils/video"
+import { computeVideoDisplayArea } from "@/lib/video-display-area"
+import { useStudioZoom } from "@/hooks/useStudioZoom"
 import type {
   AspectRatio,
   CropArea,
@@ -88,15 +90,6 @@ export default function CameraRecorder() {
   // Aspect ratio functionality
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("16:9")
 
-  // Zoom functionality
-  const [zoomLevel, setZoomLevel] = useState(1)
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
-  const [isPanning, setIsPanning] = useState(false)
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 })
-
-  // Mirror functionality
-  const [isMirrored, setIsMirrored] = useState(false)
-
   // Effect functionality
   const [videoEffect, setVideoEffect] = useState<VideoEffect>("none")
   const [effectIntensity, setEffectIntensity] = useState(5) // 1-10 scale
@@ -113,6 +106,19 @@ export default function CameraRecorder() {
   const [isEffectResizing, setIsEffectResizing] = useState(false)
   const [effectDragStart, setEffectDragStart] = useState({ x: 0, y: 0 })
   const [effectResizeHandle, setEffectResizeHandle] = useState<string>("")
+
+  const {
+    zoomLevel,
+    panOffset,
+    isPanning,
+    isMirrored,
+    setIsMirrored,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    toggleMirror,
+    handlePanStart,
+  } = useStudioZoom(!isCropMode && !isEffectCropMode)
 
   // Modal functionality for screenshot viewing
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false)
@@ -172,153 +178,17 @@ export default function CameraRecorder() {
 
     const video = videoRef.current
     const container = videoContainerRef.current
+    const containerRect = isFullscreen
+      ? video.getBoundingClientRect()
+      : container.getBoundingClientRect()
 
-    const videoWidth = video.videoWidth || 1280
-    const videoHeight = video.videoHeight || 720
-    const videoAspectRatio = videoWidth / videoHeight
-
-    // In fullscreen mode, we need to get the actual video element bounds instead of container
-    let containerRect: DOMRect
-    if (isFullscreen) {
-      // In fullscreen, use the video element's actual bounds
-      containerRect = video.getBoundingClientRect()
-    } else {
-      // In normal mode, use the container bounds
-      containerRect = container.getBoundingClientRect()
-    }
-
-    const containerAspectRatio = containerRect.width / containerRect.height
-
-    let displayedVideoWidth: number
-    let displayedVideoHeight: number
-    let videoOffsetX = 0
-    let videoOffsetY = 0
-
-    // Use a small tolerance for aspect ratio comparison to handle floating point precision
-    const aspectRatioTolerance = 0.01
-    const aspectRatioDiff = Math.abs(videoAspectRatio - containerAspectRatio)
-
-    if (aspectRatioDiff < aspectRatioTolerance) {
-      // Aspect ratios are essentially the same - video fills container
-      displayedVideoWidth = containerRect.width
-      displayedVideoHeight = containerRect.height
-      videoOffsetX = 0
-      videoOffsetY = 0
-    } else if (videoAspectRatio > containerAspectRatio) {
-      // Video is wider than container - constrain by width (letterboxed)
-      displayedVideoWidth = containerRect.width
-      displayedVideoHeight = containerRect.width / videoAspectRatio
-      videoOffsetX = 0
-      videoOffsetY = (containerRect.height - displayedVideoHeight) / 2
-    } else {
-      // Video is taller than container - constrain by height (pillarboxed)
-      displayedVideoWidth = containerRect.height * videoAspectRatio
-      displayedVideoHeight = containerRect.height
-      videoOffsetX = (containerRect.width - displayedVideoWidth) / 2
-      videoOffsetY = 0
-    }
-
-    // Debug logging with fullscreen info (only when crop modes are active)
-    if (isCropMode || isEffectCropMode) {
-      console.log(
-        `📐 Video Display Area (${aspectRatio}, ${isFullscreen ? "FULLSCREEN" : "NORMAL"}):`,
-        {
-          video: {
-            width: videoWidth,
-            height: videoHeight,
-            aspectRatio: videoAspectRatio,
-          },
-          container: {
-            width: containerRect.width,
-            height: containerRect.height,
-            aspectRatio: containerAspectRatio,
-          },
-          displayed: {
-            width: displayedVideoWidth,
-            height: displayedVideoHeight,
-          },
-          offset: { x: videoOffsetX, y: videoOffsetY },
-          aspectRatioDiff,
-          tolerance: 0.01,
-          mode: isFullscreen ? "fullscreen" : "normal",
-          cropMode: isCropMode,
-          effectCropMode: isEffectCropMode,
-        }
-      )
-    }
-
-    return {
-      displayedVideoWidth,
-      displayedVideoHeight,
-      videoOffsetX,
-      videoOffsetY,
+    return computeVideoDisplayArea({
+      videoWidth: video.videoWidth || 1280,
+      videoHeight: video.videoHeight || 720,
       containerWidth: containerRect.width,
       containerHeight: containerRect.height,
-    }
-  }, [aspectRatio, isFullscreen, isCropMode, isEffectCropMode])
-
-  // Zoom controls
-  const zoomIn = useCallback(() => {
-    setZoomLevel((prev) => Math.min(prev + 0.25, 3))
-  }, [])
-
-  const zoomOut = useCallback(() => {
-    setZoomLevel((prev) => Math.max(prev - 0.25, 0.5))
-  }, [])
-
-  const resetZoom = useCallback(() => {
-    setZoomLevel(1)
-    setPanOffset({ x: 0, y: 0 })
-  }, [])
-
-  // Mirror controls
-  const toggleMirror = useCallback(() => {
-    setIsMirrored((prev) => !prev)
-  }, [])
-
-  // Pan controls
-  const handlePanStart = useCallback(
-    (e: React.MouseEvent) => {
-      if (zoomLevel > 1 && !isCropMode && !isEffectCropMode) {
-        setIsPanning(true)
-        setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y })
-      }
-    },
-    [zoomLevel, panOffset, isCropMode, isEffectCropMode]
-  )
-
-  const handlePanMove = useCallback(
-    (e: MouseEvent) => {
-      if (isPanning && zoomLevel > 1) {
-        const newX = e.clientX - panStart.x
-        const newY = e.clientY - panStart.y
-
-        // Calculate bounds to prevent panning too far
-        const maxPan = 100 * (zoomLevel - 1)
-        const clampedX = Math.max(-maxPan, Math.min(maxPan, newX))
-        const clampedY = Math.max(-maxPan, Math.min(maxPan, newY))
-
-        setPanOffset({ x: clampedX, y: clampedY })
-      }
-    },
-    [isPanning, zoomLevel, panStart]
-  )
-
-  const handlePanEnd = useCallback(() => {
-    setIsPanning(false)
-  }, [])
-
-  // Add pan event listeners
-  useEffect(() => {
-    if (isPanning) {
-      document.addEventListener("mousemove", handlePanMove)
-      document.addEventListener("mouseup", handlePanEnd)
-      return () => {
-        document.removeEventListener("mousemove", handlePanMove)
-        document.removeEventListener("mouseup", handlePanEnd)
-      }
-    }
-  }, [isPanning, handlePanMove, handlePanEnd])
+    })
+  }, [isFullscreen])
 
   // Simplified video trimming using Web APIs (WebM)
   const trimVideoWithWebAPIs = useCallback(async () => {
