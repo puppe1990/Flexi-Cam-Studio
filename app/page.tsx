@@ -22,9 +22,7 @@ import {
   Download,
   Scissors,
   RotateCcw,
-  Video,
   Clock,
-  Settings,
   ImageIcon,
   Crop,
   Move,
@@ -34,7 +32,12 @@ import {
 } from "lucide-react"
 
 import JSZip from "jszip"
-import { ThemeToggle } from "@/components/ThemeToggle"
+import { StudioHeader } from "@/components/studio/StudioHeader"
+import { ExportFormatBar } from "@/components/studio/ExportFormatBar"
+import { StudioScreenshotGallery } from "@/components/studio/StudioScreenshotGallery"
+import { StudioScreenshotModal } from "@/components/studio/StudioScreenshotModal"
+import { HiddenCaptureSurfaces } from "@/components/studio/HiddenCaptureSurfaces"
+import { HowToGuide } from "@/components/studio/HowToGuide"
 import {
   blobToDataUrl,
   clearStoredScreenshots,
@@ -3641,219 +3644,30 @@ export default function CameraRecorder() {
   return (
     <div className="studio-shell p-4 md:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <header className="studio-header">
-          <div className="studio-brand">
-            <div className="studio-brand-icon">
-              <Video className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="studio-brand-title">FlexiCam Studio</h1>
-              <p className="studio-brand-tagline">
-                Professional camera recorder & video editor
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <ThemeToggle />
-            <div className="studio-status-bar">
-              <div
-                className={`studio-status-pill ${mp4RecordingSupported ? "studio-status-pill--ok" : "studio-status-pill--warn"}`}
-              >
-                <Settings className="w-3.5 h-3.5" />
-                <span>
-                  {mp4RecordingSupported ? "Native MP4" : "MP4 via conversion"}
-                </span>
-              </div>
-              {webCodecsSupported && (
-                <Badge
-                  variant="secondary"
-                  className="border-primary/30 bg-primary/10 text-primary font-normal"
-                >
-                  WebCodecs
-                </Badge>
-              )}
-              <Badge
-                variant="outline"
-                className="border-border bg-muted/50 font-normal"
-              >
-                {recordingMode === "webcam"
-                  ? "Webcam"
-                  : recordingMode === "screen"
-                    ? "Screen"
-                    : "Picture-in-Picture"}
-              </Badge>
-              {isCropMode && (
-                <Badge
-                  variant="outline"
-                  className="border-amber-500/40 bg-amber-500/10 text-amber-400 font-normal"
-                >
-                  Crop active
-                </Badge>
-              )}
-              {zoomLevel !== 1 && (
-                <Badge variant="outline" className="font-mono font-normal">
-                  Zoom {Math.round(zoomLevel * 100)}%
-                </Badge>
-              )}
-              {isMirrored && (
-                <Badge
-                  variant="outline"
-                  className="border-emerald-500/40 bg-emerald-500/10 text-emerald-400 font-normal"
-                >
-                  Mirrored
-                </Badge>
-              )}
-              {videoEffect !== ("none" as VideoEffect) && (
-                <Badge
-                  variant="outline"
-                  className="border-primary/40 bg-primary/10 text-primary font-normal"
-                >
-                  {videoEffect === "blur" ? "Blur" : "Pixelate"}{" "}
-                  {effectIntensity}
-                  {isEffectCropMode && " (area)"}
-                </Badge>
-              )}
-              {isLightMode && (
-                <Badge
-                  variant="outline"
-                  className="border-amber-500/40 bg-amber-500/10 text-amber-400 font-normal"
-                >
-                  Ring {lightIntensity}%
-                </Badge>
-              )}
-              {isHDScreenshot && (
-                <Badge variant="outline" className="font-mono font-normal">
-                  4K
-                </Badge>
-              )}
-              {recordingState === "recording" && (
-                <div className="studio-status-pill studio-status-pill--live">
-                  <span className="studio-rec-dot" />
-                  <span className="font-mono">{formatTime(recordingTime)}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </header>
-
+        <StudioHeader
+          mp4RecordingSupported={mp4RecordingSupported}
+          webCodecsSupported={webCodecsSupported}
+          recordingMode={recordingMode}
+          isCropMode={isCropMode}
+          zoomLevel={zoomLevel}
+          isMirrored={isMirrored}
+          videoEffect={videoEffect}
+          effectIntensity={effectIntensity}
+          isEffectCropMode={isEffectCropMode}
+          isLightMode={isLightMode}
+          lightIntensity={lightIntensity}
+          isHDScreenshot={isHDScreenshot}
+          recordingState={recordingState}
+          recordingTime={recordingTime}
+        />
         <div className="w-full space-y-8 mt-8">
-          {/* Export Format Selection */}
-          {recordingState === "stopped" || recordingState === "editing" ? (
-            <Card className="studio-panel overflow-hidden">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-center gap-6">
-                  <label className="text-sm font-semibold text-muted-foreground">
-                    Export Format:
-                  </label>
-                  <Select
-                    value={exportFormat}
-                    onValueChange={(value: ExportFormat) =>
-                      setExportFormat(value)
-                    }
-                  >
-                    <SelectTrigger className="w-40 h-10 bg-background border-border rounded-lg">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border rounded-lg shadow-xl">
-                      <SelectItem value="webm">WebM</SelectItem>
-                      <SelectItem value="mp4">MP4 (WhatsApp)</SelectItem>
-                      <SelectItem value="avi">AVI (WhatsApp)</SelectItem>
-                      <SelectItem value="mov">MOV (WhatsApp)</SelectItem>
-                      <SelectItem value="3gp">3GP (WhatsApp)</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {exportFormat === "mp4" && (
-                    <Badge
-                      variant="secondary"
-                      className="border-primary/30 bg-primary/10 text-primary"
-                    >
-                      {mp4RecordingSupported ? "Native" : "Converted"}
-                    </Badge>
-                  )}
-                </div>
-
-                {exportFormat === "mp4" &&
-                  !mp4RecordingSupported &&
-                  !webCodecsSupported && (
-                    <div className="mt-4 studio-callout studio-callout--warn text-left">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                          />
-                        </svg>
-                        <span className="font-semibold">Note</span>
-                      </div>
-                      MP4 export will use conversion method (may have
-                      compatibility limitations)
-                    </div>
-                  )}
-                {(exportFormat === "mp4" ||
-                  exportFormat === "avi" ||
-                  exportFormat === "mov" ||
-                  exportFormat === "3gp") && (
-                  <div className="mt-4 studio-callout studio-callout--ok text-left">
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <span className="font-semibold">Compatible</span>
-                    </div>
-                    This format is compatible with WhatsApp
-                    {exportFormat === "3gp" &&
-                      " (optimized for mobile networks)"}
-                  </div>
-                )}
-                {(exportFormat === "avi" ||
-                  exportFormat === "mov" ||
-                  exportFormat === "3gp") && (
-                  <div className="mt-4 studio-callout studio-callout--info text-left">
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <span className="font-semibold">Info</span>
-                    </div>
-                    {exportFormat.toUpperCase()} format may be saved as MP4 due
-                    to browser limitations, but the file extension will be .
-                    {exportFormat}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : null}
-
+          <ExportFormatBar
+            recordingState={recordingState}
+            exportFormat={exportFormat}
+            onExportFormatChange={setExportFormat}
+            mp4RecordingSupported={mp4RecordingSupported}
+            webCodecsSupported={webCodecsSupported}
+          />
           {/* Main Video Card */}
           <Card className="studio-panel studio-panel--hero overflow-hidden">
             <CardHeader className="studio-panel-header pb-0">
@@ -6081,557 +5895,37 @@ export default function CameraRecorder() {
             </CardContent>
           </Card>
 
-          {/* Screenshot Gallery */}
-          {screenshots.length > 0 && (
-            <Card className="studio-panel overflow-hidden">
-              <CardHeader className="studio-panel-header pb-0">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl flex items-center gap-3">
-                    <div className="studio-icon-btn">
-                      <ImageIcon className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-foreground">
-                      Recent Screenshots ({screenshotCount})
-                    </span>
-                  </CardTitle>
-                  <div className="flex items-center gap-3">
-                    {screenshots.length > 1 && (
-                      <Button
-                        onClick={downloadAllScreenshots}
-                        variant="outline"
-                        size="sm"
-                        disabled={isDownloadingAll}
-                        className={`shadow-sm transition-all duration-300 ${
-                          isDownloadingAll
-                            ? "border-border text-muted-foreground cursor-not-allowed opacity-60"
-                            : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
-                        }`}
-                      >
-                        {isDownloadingAll ? (
-                          <>
-                            <div className="w-4 h-4 mr-2 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                            {downloadProgress < 60
-                              ? `Preparing... ${downloadProgress}%`
-                              : downloadProgress < 95
-                                ? `Creating ZIP... ${downloadProgress}%`
-                                : `Downloading... ${downloadProgress}%`}
-                          </>
-                        ) : (
-                          <>
-                            <Download className="w-4 h-4 mr-2" />
-                            Download All ({screenshots.length}) ZIP
-                          </>
-                        )}
-                      </Button>
-                    )}
-                    <Button
-                      onClick={clearScreenshots}
-                      variant="outline"
-                      size="sm"
-                      className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all duration-300"
-                    >
-                      Clear All
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6">
-                {/* Grid Layout for Better Viewing */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 gap-4 max-h-96 overflow-y-auto">
-                  {screenshots.map((screenshot, index) => (
-                    <div key={screenshot.id} className="group">
-                      <div className="relative">
-                        <img
-                          src={screenshot.url || "/placeholder.svg"}
-                          alt={`Screenshot ${index + 1}`}
-                          className="w-full aspect-[3/4] object-cover bg-muted rounded-lg border-2 border-transparent group-hover:border-primary transition-all duration-300 cursor-pointer shadow-sm group-hover:shadow-lg"
-                          onClick={() => openScreenshotModal(index)}
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-lg flex items-center justify-center">
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                openScreenshotModal(index)
-                              }}
-                              className="bg-primary hover:bg-primary/90 text-primary-foreground p-1.5 rounded-full transition-all duration-200"
-                              title="View"
-                            >
-                              <svg
-                                className="w-3 h-3"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                />
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                downloadScreenshot(screenshot)
-                              }}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white p-1.5 rounded-full transition-all duration-200"
-                              title="Download"
-                            >
-                              <Download className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                        {/* Screenshot Number Badge */}
-                        <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
-                          {index + 1}
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1.5 text-center font-mono truncate">
-                        {screenshot.timestamp.toLocaleTimeString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Show total count and scroll hint if many screenshots */}
-                {screenshots.length > 12 && (
-                  <div className="mt-4 text-center text-sm text-muted-foreground studio-callout studio-callout--info text-left">
-                    📸 Showing all {screenshots.length} screenshots • Scroll
-                    up/down to see more • Click "Download All" to get ZIP file
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Screenshot Modal */}
-          {isScreenshotModalOpen && screenshots.length > 0 && (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="relative bg-card border border-border rounded-xl max-w-4xl max-h-[90vh] w-full overflow-hidden shadow-2xl">
-                {/* Modal Header */}
-                <div className="flex items-center justify-between p-4 border-b">
-                  <div className="flex items-center gap-3">
-                    <ImageIcon className="w-5 h-5 text-blue-600" />
-                    <div>
-                      <h3 className="font-semibold text-lg">
-                        Screenshot Preview
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedScreenshotIndex + 1} of {screenshots.length} •
-                        {screenshots[
-                          selectedScreenshotIndex
-                        ]?.timestamp.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={closeScreenshotModal}
-                    className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Modal Content */}
-                <div className="relative">
-                  {/* Main Image */}
-                  <div className="flex items-center justify-center bg-muted/30 min-h-[400px] max-h-[70vh] overflow-hidden p-4">
-                    <img
-                      src={
-                        screenshots[selectedScreenshotIndex]?.url ||
-                        "/placeholder.svg"
-                      }
-                      alt={`Screenshot ${selectedScreenshotIndex + 1}`}
-                      className="max-w-full max-h-full object-contain shadow-lg rounded"
-                      style={{ maxWidth: "90vw", maxHeight: "70vh" }}
-                    />
-                  </div>
-
-                  {/* Navigation Arrows */}
-                  {screenshots.length > 1 && (
-                    <>
-                      <button
-                        onClick={() => navigateScreenshot("prev")}
-                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all backdrop-blur-sm"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 19l-7-7 7-7"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => navigateScreenshot("next")}
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all backdrop-blur-sm"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                {/* Modal Footer */}
-                <div className="flex items-center justify-between p-4 border-t bg-gray-50">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>Format: {screenshotFormat.toUpperCase()}</span>
-                    {isMirrored && (
-                      <Badge variant="outline" className="text-xs">
-                        Mirrored
-                      </Badge>
-                    )}
-                    {isCropMode && (
-                      <Badge variant="outline" className="text-xs">
-                        Cropped
-                      </Badge>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    {screenshots.length > 1 && (
-                      <div className="flex items-center gap-1">
-                        {screenshots.map((_, index) => (
-                          <button
-                            key={index}
-                            onClick={() => setSelectedScreenshotIndex(index)}
-                            className={`w-2 h-2 rounded-full transition-all ${
-                              index === selectedScreenshotIndex
-                                ? "bg-blue-600"
-                                : "bg-gray-300 hover:bg-gray-400"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    <Button
-                      onClick={() =>
-                        downloadScreenshot(screenshots[selectedScreenshotIndex])
-                      }
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Hidden Canvases */}
-          <canvas ref={canvasRef} className="hidden" />
-          <canvas ref={screenshotCanvasRef} className="hidden" />
-          <canvas ref={cropCanvasRef} className="hidden" />
-          <canvas ref={effectCanvasRef} className="hidden" />
-          <canvas ref={pipCanvasRef} className="hidden" />
-          {/* Hidden video elements for screen capture */}
-          <video
-            ref={screenVideoRef}
-            className="hidden"
-            autoPlay
-            muted
-            playsInline
+          <StudioScreenshotGallery
+            screenshots={screenshots}
+            screenshotCount={screenshotCount}
+            isDownloadingAll={isDownloadingAll}
+            downloadProgress={downloadProgress}
+            onDownloadAll={downloadAllScreenshots}
+            onClearAll={clearScreenshots}
+            onScreenshotClick={openScreenshotModal}
+            onDownloadScreenshot={downloadScreenshot}
           />
-          {/* Preview effect canvas is already in the video container */}
-
-          {/* Instructions */}
-          <Card className="studio-panel overflow-hidden">
-            <CardHeader className="studio-panel-header">
-              <CardTitle className="text-2xl flex items-center gap-3">
-                <div className="studio-icon-btn">
-                  <svg
-                    className="w-6 h-6 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <span className="text-foreground">How to Use</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6 p-8">
-              <div className="space-y-2.5 text-sm text-muted-foreground">
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">1.</span>
-                  <span>
-                    Choose your preferred aspect ratio (16:9 for landscape, 9:16
-                    for vertical/mobile, 4:3 for classic, 1:1 for square)
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">2.</span>
-                  <span>
-                    Use zoom controls to get closer to your subject or fit more
-                    in the frame
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">3.</span>
-                  <span>
-                    Toggle mirror mode to flip the video horizontally (useful
-                    for selfie-style recording)
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">3.1.</span>
-                  <span>
-                    Use Light Mode (fullscreen only): Ring light for 16:9/4:3
-                    videos, full-screen illumination for 9:16 vertical and 1:1
-                    square videos - controls overlay on light when needed
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">4.</span>
-                  <span>
-                    Apply visual effects like blur or pixelation for privacy or
-                    artistic purposes - choose to apply to entire video or just
-                    a selected area
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">5.</span>
-                  <span>
-                    Enable "Crop Mode" to select a specific area of the camera
-                    feed to record
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">6.</span>
-                  <span>
-                    In crop mode, drag the orange rectangle to move it, or drag
-                    the corners to resize
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">7.</span>
-                  <span>
-                    When using effects, toggle "Apply to: Selected Area" to blur
-                    or pixelate only a specific region
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">8.</span>
-                  <span>
-                    Click "Take Screenshot" to capture still images in HD
-                    (1080p) or 4K quality (cropped if crop mode is active)
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">8.1.</span>
-                  <span>
-                    Toggle "Quality" between HD and 4K for higher resolution
-                    screenshots (4K: 3840x2160 for 16:9, 2160x3840 for 9:16,
-                    etc.)
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">8.2.</span>
-                  <span>
-                    Screenshots persist across aspect ratio changes and
-                    recording sessions - only cleared when you manually click
-                    "Clear All"
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">9.</span>
-                  <span>
-                    Click on screenshots in the gallery to view them in full
-                    size with navigation and download options
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">10.</span>
-                  <span>
-                    Click "Start Recording" to begin capturing video with your
-                    selected settings
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">11.</span>
-                  <span>
-                    Choose your export format (MP4, AVI, MOV, 3GP for WhatsApp
-                    compatibility)
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">12.</span>
-                  <span>
-                    Use the playback controls to preview your recording
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">13.</span>
-                  <span>
-                    Click "Edit Video" to trim your recording by setting start
-                    and end points
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="studio-step-num">14.</span>
-                  <span>Download your video in your chosen format</span>
-                </div>
-              </div>
-
-              {/* Keyboard Shortcuts */}
-              <div className="border-t border-border pt-6">
-                <h4 className="font-semibold text-foreground mb-4 flex items-center gap-3 text-lg">
-                  <div className="p-2 bg-muted rounded-lg">
-                    <svg
-                      className="w-4 h-4 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                      />
-                    </svg>
-                  </div>
-                  Keyboard Shortcuts
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                  <div className="studio-kbd-row">
-                    <span className="font-medium text-gray-700">
-                      Toggle Crop Mode
-                    </span>
-                    <kbd className="studio-kbd">C</kbd>
-                  </div>
-                  <div className="studio-kbd-row">
-                    <span className="font-medium text-gray-700">
-                      Take Screenshot
-                    </span>
-                    <kbd className="studio-kbd">S</kbd>
-                  </div>
-                  <div className="studio-kbd-row">
-                    <span className="font-medium text-gray-700">
-                      Start/Stop Recording
-                    </span>
-                    <div className="flex gap-2">
-                      <kbd className="studio-kbd">R</kbd>
-                      <span className="text-gray-400 text-xs">or</span>
-                      <kbd className="studio-kbd">Space</kbd>
-                    </div>
-                  </div>
-                  <div className="studio-kbd-row">
-                    <span className="font-medium text-gray-700">
-                      Toggle Fullscreen
-                    </span>
-                    <kbd className="studio-kbd">F</kbd>
-                  </div>
-                  <div className="studio-kbd-row">
-                    <span className="font-medium text-gray-700">Zoom In</span>
-                    <kbd className="studio-kbd">+</kbd>
-                  </div>
-                  <div className="studio-kbd-row">
-                    <span className="font-medium text-gray-700">Zoom Out</span>
-                    <kbd className="studio-kbd">-</kbd>
-                  </div>
-                  <div className="studio-kbd-row">
-                    <span className="font-medium text-gray-700">
-                      Reset Zoom
-                    </span>
-                    <kbd className="studio-kbd">0</kbd>
-                  </div>
-                  <div className="studio-kbd-row">
-                    <span className="font-medium text-gray-700">
-                      Toggle Mirror
-                    </span>
-                    <kbd className="studio-kbd">M</kbd>
-                  </div>
-                  <div className="studio-kbd-row">
-                    <span className="font-medium text-gray-700">
-                      Toggle Light Mode (Fullscreen)
-                    </span>
-                    <kbd className="studio-kbd">L</kbd>
-                  </div>
-                  <div className="studio-kbd-row">
-                    <span className="font-medium text-gray-700">
-                      Exit Modes/Fullscreen
-                    </span>
-                    <kbd className="studio-kbd">Esc</kbd>
-                  </div>
-                  <div className="studio-kbd-row">
-                    <span className="font-medium text-gray-700">
-                      Navigate Screenshots
-                    </span>
-                    <div className="flex gap-2">
-                      <kbd className="studio-kbd">←</kbd>
-                      <kbd className="studio-kbd">→</kbd>
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4 text-xs">
-                  <p className="text-muted-foreground studio-callout studio-callout--info text-left">
-                    💡 Shortcuts work when not typing in input fields
-                  </p>
-                  <p className="text-muted-foreground studio-callout text-left">
-                    🖱️ When zoomed in, drag to pan the video
-                  </p>
-                  <p className="text-muted-foreground studio-callout studio-callout--accent text-left">
-                    🎨 Purple area shows where effects will be applied
-                  </p>
-                  <p className="text-muted-foreground studio-callout studio-callout--warn text-left">
-                    💡 Light mode: ring for 16:9/4:3, full-screen for 9:16/1:1
-                    (fullscreen only)
-                  </p>
-                  <p className="text-muted-foreground studio-callout text-left">
-                    📸 4K screenshots: Ultra high-res capture (3840x2160 for
-                    16:9, up to 2160x3840 for 9:16)
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StudioScreenshotModal
+            isOpen={isScreenshotModalOpen}
+            screenshots={screenshots}
+            selectedScreenshotIndex={selectedScreenshotIndex}
+            screenshotFormat={screenshotFormat}
+            isMirrored={isMirrored}
+            isCropMode={isCropMode}
+            onClose={closeScreenshotModal}
+            onNavigate={navigateScreenshot}
+            onSelectIndex={setSelectedScreenshotIndex}
+            onDownload={downloadScreenshot}
+          />
+          <HiddenCaptureSurfaces
+            canvasRef={canvasRef}
+            screenshotCanvasRef={screenshotCanvasRef}
+            cropCanvasRef={cropCanvasRef}
+            effectCanvasRef={effectCanvasRef}
+            pipCanvasRef={pipCanvasRef}
+            screenVideoRef={screenVideoRef}
+          />
+          <HowToGuide />
         </div>
       </div>
     </div>
