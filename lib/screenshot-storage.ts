@@ -50,6 +50,8 @@ function serialize(screenshots: Screenshot[]): string {
   return JSON.stringify(payload)
 }
 
+/** Restore gallery photos from localStorage. Returns [] on SSR, missing key, or corrupt JSON.
+ *  Usage: `const photos = loadScreenshots()` after mount. */
 export function loadScreenshots(): Screenshot[] {
   const storage = getLocalStorage()
   if (!storage) return []
@@ -71,6 +73,8 @@ export function loadScreenshots(): Screenshot[] {
   }
 }
 
+/** Persist photos as data URLs. Drops oldest entries on QuotaExceededError.
+ *  Usage: `saveScreenshots([newest, ...prev])` — newest first. */
 export function saveScreenshots(screenshots: Screenshot[]): Screenshot[] {
   const storage = getLocalStorage()
   if (!storage) return []
@@ -109,12 +113,15 @@ export function saveScreenshots(screenshots: Screenshot[]): Screenshot[] {
   return []
 }
 
+/** Remove the gallery key. Usage: call from Clear All, not on unmount. */
 export function clearStoredScreenshots(): void {
   const storage = getLocalStorage()
   if (!storage) return
   storage.removeItem(SCREENSHOT_STORAGE_KEY)
 }
 
+/** Convert a capture blob into a persistable `data:image/...` URL.
+ *  Usage: `const url = await blobToDataUrl(blob)` then store `{ id, url, timestamp }`. */
 export function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
