@@ -37,7 +37,7 @@ A powerful web-based camera recording and editing application built with Next.js
 
 ## Tech Stack
 
-- **Framework**: Next.js 13+ (App Router)
+- **Framework**: Next.js 15 (App Router)
 - **UI Library**: React
 - **Styling**: Tailwind CSS
 - **Components**: Radix UI
@@ -63,17 +63,13 @@ cd camera-recorder
 2. Install dependencies:
 
 ```bash
-npm install
-# or
-yarn install
+pnpm install
 ```
 
 3. Start the development server:
 
 ```bash
-npm run dev
-# or
-yarn dev
+pnpm dev
 ```
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser.
@@ -122,21 +118,26 @@ Note: Some features may require specific browser capabilities. The application w
 ### Project Structure
 
 ```
-app/
-├── layout.tsx      # Root layout
-├── page.tsx        # Main application page
-└── globals.css     # Global styles
-components/
-└── ui/            # UI components
-    └── button.tsx # Button component
+app/page.tsx              # Live studio UI (god file — extract, do not grow)
+hooks/                    # camera, screenshot, crop, zoom, effects
+lib/                      # screenshot-storage, video helpers
+types/camera.ts           # shared domain types
+components/               # gallery, modal, control panels, theme
+components/ui/            # shadcn primitives
+__tests__/lib/            # Vitest tests mirroring lib/
 ```
+
+See `AGENTS.md` for how to change this repo.
 
 ### Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
+- `pnpm dev` — Start development server
+- `pnpm build` — Build for production
+- `pnpm start` — Start production server
+- `pnpm lint` — ESLint
+- `pnpm test` — Vitest
+- `pnpm format` / `pnpm format:check` — Prettier
+- `pnpm verify` — lint + Prettier + tests (one-shot)
 
 ## Contributing
 

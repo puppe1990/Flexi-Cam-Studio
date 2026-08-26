@@ -25,3 +25,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright-cli session dumps
+.playwright-cli/
+
+# git worktrees
+.worktrees/

@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "verify": "pnpm lint && pnpm format:check && pnpm test",
     "prepare": "husky"
   },
   "lint-staged": {
